@@ -48,3 +48,6 @@ Thumbs.db
 *.mov
 *.wmv
 
+# AccessToken
+.Quzbus/src/main/res/values/developer-config.xml
+
