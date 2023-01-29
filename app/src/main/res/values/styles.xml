@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Widget.Material3.BottomSheet" parent="Widget.MaterialComponents.BottomSheet">
+        <!-- Add any necessary styles for the bottom sheet here -->
+    </style>
+
+</resources>
