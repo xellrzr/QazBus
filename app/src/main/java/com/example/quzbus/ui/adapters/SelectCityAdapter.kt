@@ -7,10 +7,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.quzbus.data.models.City
 import com.example.quzbus.databinding.ItemCityBinding
 
-class SelectAdapter(
+class SelectCityAdapter(
     private val context: Context,
     private val cities: List<City>
-) : RecyclerView.Adapter<SelectAdapter.SelectCityViewHolder>() {
+) : RecyclerView.Adapter<SelectCityAdapter.SelectCityViewHolder>() {
 
     inner class SelectCityViewHolder(private val binding: ItemCityBinding
     ) : RecyclerView.ViewHolder(binding.root) {

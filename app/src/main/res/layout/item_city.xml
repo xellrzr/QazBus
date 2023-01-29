@@ -8,11 +8,14 @@
 
     <TextView
         android:id="@+id/tv_city_title"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         tools:text="Петропавловск"
         android:textSize="18sp"
         android:textColor="@color/black"
-        android:layout_gravity="center_horizontal"/>
+        android:gravity="center"
+        android:textStyle="bold"
+        android:layout_marginTop="@dimen/dimen_4"
+        android:background="@drawable/rounded_tv_shape"/>
 
 </LinearLayout>

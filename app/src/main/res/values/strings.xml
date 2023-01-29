@@ -14,4 +14,18 @@
     <string name="city10">Кокчетав</string>
     <string name="city11">Тараз</string>
     <string name="city12">Шымкент</string>
+
+    <!-- Buses -->
+    <string name="bus1">1</string>
+    <string name="bus2">2</string>
+    <string name="bus3">23</string>
+    <string name="bus4">4A</string>
+    <string name="bus5">12</string>
+    <string name="bus6">43</string>
+    <string name="bus7">11</string>
+    <string name="bus8">54</string>
+    <string name="bus9">4C</string>
+    <string name="bus10">62</string>
+    <string name="bus11">52</string>
+    <string name="bus12">12</string>
 </resources>

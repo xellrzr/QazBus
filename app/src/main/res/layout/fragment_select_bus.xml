@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <View
+        android:layout_width="@dimen/dimen_100"
+        android:layout_height="@dimen/dimen_8"
+        android:layout_gravity="center"
+        android:layout_marginTop="@dimen/dimen_12"
+        android:background="@drawable/rounded_tv_shape"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Выберите маршрут:"
+        android:textColor="@color/black"
+        android:layout_marginTop="@dimen/dimen_8"
+        android:layout_marginStart="@dimen/dimen_12"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_select_bus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+        app:spanCount="4"
+        android:layout_gravity="center_horizontal"
+        tools:listitem="@layout/item_custom_button"
+        android:layout_margin="@dimen/dimen_12" />
+
+</LinearLayout>
