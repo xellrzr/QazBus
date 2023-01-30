@@ -1,11 +1,13 @@
 package com.example.quzbus.ui.fragments
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.viewbinding.library.fragment.viewBinding
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.quzbus.R
@@ -14,11 +16,14 @@ import com.example.quzbus.data.models.City
 import com.example.quzbus.databinding.FragmentMapBinding
 import com.example.quzbus.ui.adapters.SelectBusAdapter
 import com.example.quzbus.ui.adapters.SelectCityAdapter
+import com.example.quzbus.ui.viewmodels.MapViewModel
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
+import dagger.hilt.android.AndroidEntryPoint
 
 var mapView: MapView? = null
 
+@AndroidEntryPoint
 class MapFragment : Fragment() {
 
     private val binding: FragmentMapBinding by viewBinding()
@@ -26,6 +31,7 @@ class MapFragment : Fragment() {
     private val buses = loadBuses()
     private val selectCityAdapter by lazy { SelectCityAdapter(requireContext(),data) }
     private val selectBusAdapter by lazy { SelectBusAdapter(requireContext(), buses) }
+    private val viewModel: MapViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,6 +49,19 @@ class MapFragment : Fragment() {
 
         setupRecyclerViewSelectCity()
         setupRecyclerViewSelectBus()
+
+        setupListeners()
+    }
+
+    private fun setupListeners() {
+        getSmsCode()
+    }
+
+    private fun getSmsCode() {
+        binding.authField.btnSend.setOnClickListener {
+            viewModel.getSmsCode(binding.authField.etPhoneNumberEdit.text.toString())
+            Log.d("TAG", binding.authField.etPhoneNumberEdit.text.toString())
+        }
     }
 
     private fun setupRecyclerViewSelectCity() {

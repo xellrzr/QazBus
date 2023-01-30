@@ -16,6 +16,13 @@
         mapbox:mapbox_cameraTargetLng="69.09"
         mapbox:mapbox_cameraZoom="9.0"/>
 
+    <include layout="@layout/fragment_auth"
+        android:id="@+id/auth_field"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/dimen_36"
+        app:layout_anchor="@id/standard_bottom_sheet"/>
+
     <FrameLayout
         android:id="@+id/standard_bottom_sheet"
         style="@style/Widget.Material3.BottomSheet"
@@ -32,12 +39,12 @@
         <include
             android:id="@+id/select_city"
             layout="@layout/fragment_select_city"
-            android:visibility="gone"/>
+            android:visibility="visible"/>
 
         <include
             android:id="@+id/select_bus"
             layout="@layout/fragment_select_bus"
-            android:visibility="visible"/>
+            android:visibility="gone"/>
 
     </FrameLayout>
 
