@@ -1,21 +1,19 @@
 package com.example.quzbus.ui.adapters
 
-import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.example.quzbus.data.models.City
+import com.example.quzbus.data.models.response.Region
 import com.example.quzbus.databinding.ItemCityBinding
 
 class SelectCityAdapter(
-    private val context: Context,
-    private val cities: List<City>
+    private val cities: List<Region>
 ) : RecyclerView.Adapter<SelectCityAdapter.SelectCityViewHolder>() {
 
     inner class SelectCityViewHolder(private val binding: ItemCityBinding
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(city: City) {
-            binding.tvCityTitle.text = context.getString(city.title)
+        fun bind(region: Region) {
+            binding.tvCityTitle.text = region.city
         }
     }
 

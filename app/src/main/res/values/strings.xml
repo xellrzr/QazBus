@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">QuzBus</string>
 
+    <!-- Phone & SMS code Errors -->
+    <string name="incorrect_phone_number">Неверный номер</string>
+    <string name="incorrect_sms_code">Введите код</string>
+
     <!-- Cities -->
     <string name="city1">Астана</string>
     <string name="city2">Алма-Ата</string>

@@ -2,7 +2,9 @@ package com.example.quzbus.di
 
 import com.example.quzbus.data.remote.QazBusApi
 import com.example.quzbus.data.repositoryImpl.AuthRepositoryImpl
+import com.example.quzbus.data.repositoryImpl.CitiesRepositoryImpl
 import com.example.quzbus.domain.repository.AuthRepository
+import com.example.quzbus.domain.repository.CitiesRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -12,6 +14,14 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
+
+    @Singleton
+    @Provides
+    fun provideCitiesRepository(
+        api: QazBusApi
+    ): CitiesRepository {
+        return CitiesRepositoryImpl(api)
+    }
 
     @Singleton
     @Provides
