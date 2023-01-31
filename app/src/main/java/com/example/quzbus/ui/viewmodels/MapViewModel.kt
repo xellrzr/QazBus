@@ -11,6 +11,7 @@ import com.example.quzbus.data.models.AuthFormState
 import com.example.quzbus.data.models.response.Message
 import com.example.quzbus.domain.repository.AuthRepository
 import com.example.quzbus.domain.repository.CitiesRepository
+import com.example.quzbus.domain.repository.SaveDataRepository
 import com.example.quzbus.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -19,7 +20,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MapViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val citiesRepository: CitiesRepository
+    private val citiesRepository: CitiesRepository,
+    private val saveDataRepository: SaveDataRepository
 ) : ViewModel() {
 
     private val _getCitiesResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
@@ -53,6 +55,18 @@ class MapViewModel @Inject constructor(
             _getAuthResponse.postValue(NetworkResult.Loading())
             _getAuthResponse.postValue(authRepository.getAuth(phoneNumber, language, password))
         }
+    }
+
+    fun setSelectCity(city: String) {
+        saveDataRepository.setSelectCity(city)
+    }
+
+    fun setPhoneNumber(phoneNumber: String) {
+        saveDataRepository.setPhoneNumber(phoneNumber)
+    }
+
+    fun setAccessToken(accessToken: String) {
+        saveDataRepository.setAccessToken(accessToken)
     }
 
     fun authDataChanged(phoneNumber: String, smsCode: String) {

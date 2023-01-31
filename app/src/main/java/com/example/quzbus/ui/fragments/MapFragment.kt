@@ -15,8 +15,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.quzbus.R
 import com.example.quzbus.data.models.Bus
-import com.example.quzbus.data.models.City
-import com.example.quzbus.data.models.response.Region
 import com.example.quzbus.databinding.FragmentMapBinding
 import com.example.quzbus.ui.adapters.SelectBusAdapter
 import com.example.quzbus.ui.adapters.SelectCityAdapter
@@ -25,7 +23,9 @@ import com.example.quzbus.utils.NetworkResult
 import com.example.quzbus.utils.afterTextChanged
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
+import com.redmadrobot.inputmask.MaskedTextChangedListener
 import dagger.hilt.android.AndroidEntryPoint
+
 
 var mapView: MapView? = null
 
@@ -33,12 +33,10 @@ var mapView: MapView? = null
 class MapFragment : Fragment() {
 
     private val binding: FragmentMapBinding by viewBinding()
-    private val data = loadCities()
     private val buses = loadBuses()
-    private val selectCityAdapter by lazy { SelectCityAdapter(list) }
+    private val selectCityAdapter by lazy { SelectCityAdapter(requireContext()) }
     private val selectBusAdapter by lazy { SelectBusAdapter(requireContext(), buses) }
     private val viewModel: MapViewModel by viewModels()
-    private val list: MutableList<Region> = mutableListOf()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,41 +49,73 @@ class MapFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        lifecycleScope.launchWhenStarted {
-            viewModel.getCities()
-            observeCities()
-            setupRecyclerViewSelectCity()
-        }
-
         mapView = binding.mapView
         mapView?.getMapboxMap()?.loadStyleUri(Style.MAPBOX_STREETS)
 
-        setupRecyclerViewSelectBus()
-
-        setupListeners()
+        addPhoneNumberMask()
+        getCities()
         observeCities()
+        setupRecyclerViewSelectBus()
         setupRecyclerViewSelectCity()
+        setupListeners()
         checkPhoneNumberCodeDataChanged()
+    }
 
+    private fun addPhoneNumberMask() {
+        val editText = binding.authField.etPhoneNumberEdit
+        val listener = MaskedTextChangedListener("+ [0] ([000]) [000]-[00]-[00]", editText)
+
+        editText.addTextChangedListener(listener)
+        editText.onFocusChangeListener = listener
+    }
+
+    private fun getCities() {
+        lifecycleScope.launchWhenStarted {
+            viewModel.getCities()
+        }
     }
 
     private fun observeCities() {
-        viewModel.getCitiesResponse.observe(viewLifecycleOwner) {
-            val result = it
+        viewModel.getCitiesResponse.observe(viewLifecycleOwner) { result ->
 
             when (result) {
+                is NetworkResult.Loading -> {
+                    Toast.makeText(requireContext(), "LOADING", Toast.LENGTH_SHORT).show()
+                }
                 is NetworkResult.Success -> {
                     val data = result.data?.regions
                     if (data != null) {
-                        list.addAll(data)
+                        result.data.let { selectCityAdapter.setNewData(it) }
                     }
                 }
                 else -> {
-                    Toast.makeText(requireContext(), "${result.data?.regions}", Toast.LENGTH_SHORT).show()
-                    val data = result.data?.regions
-                    if (data != null) {
-                        list.addAll(data)
+                    Toast.makeText(requireContext(), "ERROR", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun observeAuth() {
+        viewModel.getAuthResponse.observe(viewLifecycleOwner) { result ->
+
+            when(result) {
+                is NetworkResult.Loading -> {
+                    Toast.makeText(requireContext(), "LOADING ROUTES", Toast.LENGTH_SHORT).show()
+                }
+                is NetworkResult.Success -> {
+                    val data = result.data?.result
+                    if (data == "0") {
+                        Toast.makeText(requireContext(), "ALREADY LOG", Toast.LENGTH_SHORT).show()
+                        Log.d("TAG", data)
+                    } else {
+                        if (data != null) {
+                            viewModel.setAccessToken(data)
+                            Log.d("TAG", data)
+                        }
                     }
+                }
+                else -> {
+                    Toast.makeText(requireContext(), "ERROR", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -93,11 +123,13 @@ class MapFragment : Fragment() {
 
     private fun setupListeners() {
         getSmsCode()
+        selectRegion()
     }
 
     private fun getSmsCode() {
         binding.authField.btnSend.setOnClickListener {
             viewModel.getSmsCode(binding.authField.etPhoneNumberEdit.text.toString())
+            viewModel.setPhoneNumber(binding.authField.etPhoneNumberEdit.text.toString())
             Log.d("TAG", binding.authField.etPhoneNumberEdit.text.toString())
         }
     }
@@ -127,6 +159,7 @@ class MapFragment : Fragment() {
 
     private fun getAuth(phoneNumber: String, language: String, smsCode: String) {
         viewModel.getAuth(phoneNumber, language, smsCode)
+        observeAuth()
     }
 
     private fun setupRecyclerViewSelectCity() {
@@ -143,23 +176,14 @@ class MapFragment : Fragment() {
         }
     }
 
-    companion object {
-        fun loadCities(): List<City> {
-            return listOf(
-                City(R.string.city1),
-                City(R.string.city2),
-                City(R.string.city3),
-                City(R.string.city4),
-                City(R.string.city5),
-                City(R.string.city6),
-                City(R.string.city7),
-                City(R.string.city8),
-                City(R.string.city9),
-                City(R.string.city10),
-                City(R.string.city11),
-                City(R.string.city12)
-            )
+    //Saved in pref selected city
+    private fun selectRegion() {
+        selectCityAdapter.setOnItemClickListener {
+            viewModel.setSelectCity(it.city)
         }
+    }
+
+    companion object {
 
         fun loadBuses(): List<Bus> {
             return listOf(
