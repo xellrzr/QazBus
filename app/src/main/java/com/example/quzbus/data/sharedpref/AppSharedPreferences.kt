@@ -19,6 +19,12 @@ class AppSharedPreferences @Inject constructor(
         sharedPreferences.edit().putString(SELECT_CITY, city).apply()
     }
 
+    fun getSelectCityId(): Int = sharedPreferences.getInt(CITY_ID, 0)
+
+    fun setCityId(cityId: Int) {
+        sharedPreferences.edit().putInt(CITY_ID, cityId).apply()
+    }
+
     fun getPhoneNumber(): String? = sharedPreferences.getString(PHONE_NUMBER, null)
 
     fun setPhoneNumber(phoneNumber: String) {
@@ -30,5 +36,6 @@ class AppSharedPreferences @Inject constructor(
         const val ACCESS_TOKEN_KEY = "access_token"
         const val SELECT_CITY = "select_city"
         const val PHONE_NUMBER = "phone_number"
+        const val CITY_ID = "city_id"
     }
 }

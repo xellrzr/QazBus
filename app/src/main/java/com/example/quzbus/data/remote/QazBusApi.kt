@@ -35,7 +35,7 @@ interface QazBusApi {
     suspend fun getRoutes(
         @Field("sid") sid: String,
         @Field("phone") phone: String,
-        @Field("city") city: String,
+        @Field("city") city: Int,
         @Field("id") id: Int = 0,//0
         @Field("route") route: Int = 0//0
     ): Response<Routes>

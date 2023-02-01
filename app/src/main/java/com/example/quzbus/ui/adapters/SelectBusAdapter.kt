@@ -1,23 +1,25 @@
 package com.example.quzbus.ui.adapters
 
-import android.content.Context
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.example.quzbus.data.models.Bus
+import com.example.quzbus.data.models.response.Route
+import com.example.quzbus.data.models.response.Routes
 import com.example.quzbus.databinding.ItemCustomButtonBinding
+import com.example.quzbus.utils.MyDiffUtil
 
 class SelectBusAdapter(
-    private val context: Context,
-    private val buses: List<Bus>
 ) : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHolder>() {
+
+    private var busRoutes = emptyList<Route>()
 
     inner class SelectBusViewHolder(private val binding: ItemCustomButtonBinding
     ) : RecyclerView.ViewHolder(binding.root) {
-        fun bind(bus: Bus) {
+        fun bind(route: Route) {
             binding.apply {
-                tvBusNumber.text = context.getString(bus.number)
-                tvBusOnline.text = bus.online.toString()
+                tvBusNumber.text = route.route
+                tvBusOnline.text = route.auto
             }
         }
     }
@@ -28,11 +30,18 @@ class SelectBusAdapter(
     }
 
     override fun onBindViewHolder(holder: SelectBusViewHolder, position: Int) {
-        val current = buses[position]
+        val current = busRoutes[position]
         holder.bind(current)
     }
 
     override fun getItemCount(): Int {
-        return buses.size
+        return busRoutes.size
+    }
+
+    fun setNewData(newData: Routes) {
+        val diffUtil = MyDiffUtil(busRoutes, newData.routes)
+        val diffUtilResult = DiffUtil.calculateDiff(diffUtil)
+        busRoutes = newData.routes
+        diffUtilResult.dispatchUpdatesTo(this)
     }
 }

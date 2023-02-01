@@ -14,7 +14,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.quzbus.R
-import com.example.quzbus.data.models.Bus
 import com.example.quzbus.databinding.FragmentMapBinding
 import com.example.quzbus.ui.adapters.SelectBusAdapter
 import com.example.quzbus.ui.adapters.SelectCityAdapter
@@ -33,9 +32,8 @@ var mapView: MapView? = null
 class MapFragment : Fragment() {
 
     private val binding: FragmentMapBinding by viewBinding()
-    private val buses = loadBuses()
     private val selectCityAdapter by lazy { SelectCityAdapter(requireContext()) }
-    private val selectBusAdapter by lazy { SelectBusAdapter(requireContext(), buses) }
+    private val selectBusAdapter by lazy { SelectBusAdapter() }
     private val viewModel: MapViewModel by viewModels()
 
     override fun onCreateView(
@@ -104,14 +102,31 @@ class MapFragment : Fragment() {
                 }
                 is NetworkResult.Success -> {
                     val data = result.data?.result
-                    if (data == "0") {
-                        Toast.makeText(requireContext(), "ALREADY LOG", Toast.LENGTH_SHORT).show()
-                        Log.d("TAG", data)
-                    } else {
-                        if (data != null) {
-                            viewModel.setAccessToken(data)
-                            Log.d("TAG", data)
-                        }
+                    if (data != null) {
+                        if (data.length == 1) Toast.makeText(requireContext(), "Already Loged in", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                else -> {
+                    Toast.makeText(requireContext(), "ERROR", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun observeRoutes() {
+        viewModel.getRoutesResponse.observe(viewLifecycleOwner) { result ->
+
+            when(result) {
+                is NetworkResult.Loading -> {
+                    binding.selectCity.root.visibility = View.GONE
+                    binding.progressBar.visibility = View.VISIBLE
+                    binding.selectBus.root.visibility = View.VISIBLE
+                }
+                is NetworkResult.Success -> {
+                    val data = result.data?.routes
+                    if (data != null ) {
+                        result.data.let { selectBusAdapter.setNewData(it) }
+                        binding.progressBar.visibility = View.GONE
                     }
                 }
                 else -> {
@@ -129,7 +144,6 @@ class MapFragment : Fragment() {
     private fun getSmsCode() {
         binding.authField.btnSend.setOnClickListener {
             viewModel.getSmsCode(binding.authField.etPhoneNumberEdit.text.toString())
-            viewModel.setPhoneNumber(binding.authField.etPhoneNumberEdit.text.toString())
             Log.d("TAG", binding.authField.etPhoneNumberEdit.text.toString())
         }
     }
@@ -180,26 +194,9 @@ class MapFragment : Fragment() {
     private fun selectRegion() {
         selectCityAdapter.setOnItemClickListener {
             viewModel.setSelectCity(it.city)
-        }
-    }
-
-    companion object {
-
-        fun loadBuses(): List<Bus> {
-            return listOf(
-                Bus(R.string.bus1, 2),
-                Bus(R.string.bus2, 1),
-                Bus(R.string.bus3, 0),
-                Bus(R.string.bus4, 11),
-                Bus(R.string.bus5, 2),
-                Bus(R.string.bus6, 5),
-                Bus(R.string.bus7, 7),
-                Bus(R.string.bus8, 1),
-                Bus(R.string.bus9, 2),
-                Bus(R.string.bus10, 4),
-                Bus(R.string.bus11, 3),
-                Bus(R.string.bus12, 2),
-            )
+            viewModel.setCityId(it.rid)
+            viewModel.getRoutes(it.rid)
+            observeRoutes()
         }
     }
 }

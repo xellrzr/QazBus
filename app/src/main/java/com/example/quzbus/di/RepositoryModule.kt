@@ -3,11 +3,11 @@ package com.example.quzbus.di
 import com.example.quzbus.data.remote.QazBusApi
 import com.example.quzbus.data.repositoryImpl.AuthRepositoryImpl
 import com.example.quzbus.data.repositoryImpl.CitiesRepositoryImpl
-import com.example.quzbus.data.repositoryImpl.SaveDataRepositoryImpl
+import com.example.quzbus.data.repositoryImpl.RoutesRepositoryImpl
 import com.example.quzbus.data.sharedpref.AppSharedPreferences
 import com.example.quzbus.domain.repository.AuthRepository
 import com.example.quzbus.domain.repository.CitiesRepository
-import com.example.quzbus.domain.repository.SaveDataRepository
+import com.example.quzbus.domain.repository.RoutesRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -20,25 +20,28 @@ object RepositoryModule {
 
     @Singleton
     @Provides
-    fun provideSaveDataRepository(
+    fun provideRoutesRepository(
+        api: QazBusApi,
         sharedPreferences: AppSharedPreferences
-    ): SaveDataRepository {
-        return SaveDataRepositoryImpl(sharedPreferences)
+    ): RoutesRepository {
+        return RoutesRepositoryImpl(api,sharedPreferences)
     }
 
     @Singleton
     @Provides
     fun provideCitiesRepository(
-        api: QazBusApi
+        api: QazBusApi,
+        sharedPreferences: AppSharedPreferences
     ): CitiesRepository {
-        return CitiesRepositoryImpl(api)
+        return CitiesRepositoryImpl(api, sharedPreferences)
     }
 
     @Singleton
     @Provides
     fun provideAuthRepository(
-        api: QazBusApi
+        api: QazBusApi,
+        sharedPreferences: AppSharedPreferences
     ): AuthRepository {
-        return AuthRepositoryImpl(api)
+        return AuthRepositoryImpl(api, sharedPreferences)
     }
 }

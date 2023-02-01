@@ -6,4 +6,8 @@ import com.example.quzbus.utils.NetworkResult
 interface CitiesRepository{
 
     suspend fun getCities(): NetworkResult<Message>
+
+    fun setSelectCity(city: String)
+
+    fun setCityId(cityId: Int)
 }

@@ -1,7 +1,5 @@
 package com.example.quzbus.ui.viewmodels
 
-import android.util.Log
-import android.util.Patterns
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -9,9 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.quzbus.R
 import com.example.quzbus.data.models.AuthFormState
 import com.example.quzbus.data.models.response.Message
+import com.example.quzbus.data.models.response.Routes
 import com.example.quzbus.domain.repository.AuthRepository
 import com.example.quzbus.domain.repository.CitiesRepository
-import com.example.quzbus.domain.repository.SaveDataRepository
+import com.example.quzbus.domain.repository.RoutesRepository
 import com.example.quzbus.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -21,7 +20,7 @@ import javax.inject.Inject
 class MapViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val citiesRepository: CitiesRepository,
-    private val saveDataRepository: SaveDataRepository
+    private val routesRepository: RoutesRepository
 ) : ViewModel() {
 
     private val _getCitiesResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
@@ -36,10 +35,14 @@ class MapViewModel @Inject constructor(
     private val _authFormState: MutableLiveData<AuthFormState> = MutableLiveData()
     val authFormState: LiveData<AuthFormState> = _authFormState
 
+    private val _getRoutesResponse: MutableLiveData<NetworkResult<Routes>> = MutableLiveData()
+    val getRoutesResponse: LiveData<NetworkResult<Routes>> = _getRoutesResponse
+
     fun getCities(){
         viewModelScope.launch {
             _getCitiesResponse.postValue(NetworkResult.Loading())
             _getCitiesResponse.postValue(citiesRepository.getCities())
+
         }
     }
 
@@ -57,16 +60,19 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    fun getRoutes(cityId: Int) {
+        viewModelScope.launch {
+            _getRoutesResponse.postValue(NetworkResult.Loading())
+            _getRoutesResponse.postValue(routesRepository.getRoutes(cityId))
+        }
+    }
+
     fun setSelectCity(city: String) {
-        saveDataRepository.setSelectCity(city)
+        citiesRepository.setSelectCity(city)
     }
 
-    fun setPhoneNumber(phoneNumber: String) {
-        saveDataRepository.setPhoneNumber(phoneNumber)
-    }
-
-    fun setAccessToken(accessToken: String) {
-        saveDataRepository.setAccessToken(accessToken)
+    fun setCityId(cityId: Int) {
+        citiesRepository.setCityId(cityId)
     }
 
     fun authDataChanged(phoneNumber: String, smsCode: String) {
