@@ -19,11 +19,14 @@ class RoutesRepositoryImpl @Inject constructor(
 
     override suspend fun getRoutes(cityId: Int): NetworkResult<Routes> {
         if (accessToken != null && phoneNumber != null) {
+            pref.setCityId(cityId)
             Log.d("TAG", "SUCCESS")
+            Log.d("TAG", "accessToken = $accessToken, phoneNumber = $phoneNumber")
             return safeApiCall { api.getRoutes(accessToken, phoneNumber, cityId) }
 //            return networkResult.result(networkResult)
         }
         Log.d("TAG", "ERROR")
+        Log.d("TAG", "accessToken = $accessToken, phoneNumber = $phoneNumber")
         return NetworkResult.Error("Not Authorized")
     }
 

@@ -9,6 +9,7 @@ interface AuthRepository {
 
     suspend fun getAuth(
         phoneNumber: String,
-        language: String,
         password: String): NetworkResult<Message>
+
+    fun isUserLoggedIn(): Boolean
 }

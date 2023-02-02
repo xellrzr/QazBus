@@ -1,6 +1,8 @@
 package com.example.quzbus.ui.fragments
 
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -22,9 +24,9 @@ import com.example.quzbus.utils.NetworkResult
 import com.example.quzbus.utils.afterTextChanged
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
+import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
 import com.redmadrobot.inputmask.MaskedTextChangedListener
 import dagger.hilt.android.AndroidEntryPoint
-
 
 var mapView: MapView? = null
 
@@ -33,7 +35,7 @@ class MapFragment : Fragment() {
 
     private val binding: FragmentMapBinding by viewBinding()
     private val selectCityAdapter by lazy { SelectCityAdapter(requireContext()) }
-    private val selectBusAdapter by lazy { SelectBusAdapter() }
+    private val selectBusAdapter by lazy { SelectBusAdapter(requireContext()) }
     private val viewModel: MapViewModel by viewModels()
 
     override fun onCreateView(
@@ -50,13 +52,52 @@ class MapFragment : Fragment() {
         mapView = binding.mapView
         mapView?.getMapboxMap()?.loadStyleUri(Style.MAPBOX_STREETS)
 
+
+        // Create a Mapbox map
+        mapView.getMapAsync { mapboxMap ->
+            // Calculate the route using Mapbox Navigation
+            val navigationRoute = NavigationRoute.builder(this)
+                .accessToken(getString(R.string.mapbox_access_token))
+                .coordinates(startPoint, endPoint)
+                .build()
+            navigationRoute.getRoute(object : Callback<DirectionsResponse> {
+                override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {
+                    val directionsRoute = response.body()?.routes()?.get(0)
+                    if (directionsRoute != null) {
+                        // Convert the route into a series of LatLng objects
+                        val routeCoordinates = LineString.fromPolyline(directionsRoute.geometry()!!, PRECISION_6).coordinates()
+                        val latLngs = ArrayList<LatLng>()
+                        for (point in routeCoordinates) {
+                            latLngs.add(LatLng(point.latitude(), point.longitude()))
+                        }
+                        // Draw the route on the map using a polyline
+                        val polyline = mapboxMap.addPolyline(PolylineOptions()
+                            .addAll(latLngs)
+                            .color(ContextCompat.getColor(this@MainActivity, R.color.mapbox_blue))
+                            .width(5f))
+                    }
+                }
+                override fun onFailure(call: Call<DirectionsResponse>, throwable: Throwable) {
+                    Timber.e(throwable)
+                }
+            })
+        }
+
+
+
+        isShowAuthField()
         addPhoneNumberMask()
-        getCities()
-        observeCities()
+        setupListeners()
         setupRecyclerViewSelectBus()
         setupRecyclerViewSelectCity()
-        setupListeners()
+        getCities()
+        observeCities()
         checkPhoneNumberCodeDataChanged()
+        setSmsCode()
+    }
+
+    private fun isShowAuthField() {
+        binding.authField.root.visibility = if (viewModel.isUserLoggedIn()) View.GONE else View.VISIBLE
     }
 
     private fun addPhoneNumberMask() {
@@ -67,9 +108,93 @@ class MapFragment : Fragment() {
         editText.onFocusChangeListener = listener
     }
 
+    private fun setupListeners() {
+        getSmsCode()
+        selectRegion()
+        getSingleRoute()
+    }
+
+    private fun setupRecyclerViewSelectCity() {
+        binding.selectCity.rvSelectCities.apply {
+            adapter = selectCityAdapter
+            layoutManager = LinearLayoutManager(requireContext())
+        }
+    }
+
+    private fun setupRecyclerViewSelectBus() {
+        binding.selectBus.rvSelectBus.apply {
+            adapter = selectBusAdapter
+            layoutManager = GridLayoutManager(requireContext(), 4)
+        }
+    }
+
     private fun getCities() {
         lifecycleScope.launchWhenStarted {
             viewModel.getCities()
+        }
+    }
+
+    private fun getSmsCode() {
+        binding.authField.btnSend.setOnClickListener {
+            val phoneNumber = binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), "")
+            viewModel.getSmsCode(phoneNumber)
+            Log.d("TAG", phoneNumber)
+        }
+    }
+
+    private fun selectRegion() {
+        selectCityAdapter.setOnItemClickListener {
+            viewModel.getRoutes(it.rid)
+            observeRoutes()
+        }
+    }
+
+    private fun getSingleRoute() {
+        selectBusAdapter.setOnItemClickListener {
+            viewModel.getSingleRoute(it.route)
+        }
+    }
+
+    private fun setSmsCode() {
+        binding.authField.etSmsCodeEdit.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                if (s?.length == 6) {
+                    getAuth(
+                        binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), ""),
+                        binding.authField.etSmsCodeEdit.text.toString()
+                    )
+                }
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+    }
+
+    private fun getAuth(phoneNumber: String, smsCode: String) {
+        viewModel.getAuth(phoneNumber, smsCode)
+        observeAuth()
+    }
+
+    private fun checkPhoneNumberCodeDataChanged() {
+        binding.authField.etSmsCodeEdit.apply {
+            afterTextChanged {
+                viewModel.authDataChanged(
+                    binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), ""),
+                    binding.authField.etSmsCodeEdit.text.toString()
+                )
+            }
+
+            setOnEditorActionListener { _, actionId, _ ->
+                when (actionId) {
+                    EditorInfo.IME_ACTION_DONE ->
+                        getAuth(
+                            binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), ""),
+                            binding.authField.etSmsCodeEdit.text.toString()
+                        )
+                }
+                false
+            }
         }
     }
 
@@ -103,7 +228,7 @@ class MapFragment : Fragment() {
                 is NetworkResult.Success -> {
                     val data = result.data?.result
                     if (data != null) {
-                        if (data.length == 1) Toast.makeText(requireContext(), "Already Loged in", Toast.LENGTH_SHORT).show()
+                        if (data.length > 1) binding.authField.root.visibility = View.GONE
                     }
                 }
                 else -> {
@@ -136,67 +261,5 @@ class MapFragment : Fragment() {
         }
     }
 
-    private fun setupListeners() {
-        getSmsCode()
-        selectRegion()
-    }
 
-    private fun getSmsCode() {
-        binding.authField.btnSend.setOnClickListener {
-            viewModel.getSmsCode(binding.authField.etPhoneNumberEdit.text.toString())
-            Log.d("TAG", binding.authField.etPhoneNumberEdit.text.toString())
-        }
-    }
-
-    private fun checkPhoneNumberCodeDataChanged() {
-        binding.authField.etSmsCodeEdit.apply {
-            afterTextChanged {
-                viewModel.authDataChanged(
-                    binding.authField.etPhoneNumberEdit.text.toString(),
-                    binding.authField.etSmsCodeEdit.text.toString()
-                )
-            }
-
-            setOnEditorActionListener { _, actionId, _ ->
-                when (actionId) {
-                    EditorInfo.IME_ACTION_DONE ->
-                        getAuth(
-                            binding.authField.etPhoneNumberEdit.text.toString(),
-                            "0",
-                            binding.authField.etSmsCodeEdit.text.toString()
-                        )
-                }
-                false
-            }
-        }
-    }
-
-    private fun getAuth(phoneNumber: String, language: String, smsCode: String) {
-        viewModel.getAuth(phoneNumber, language, smsCode)
-        observeAuth()
-    }
-
-    private fun setupRecyclerViewSelectCity() {
-        binding.selectCity.rvSelectCities.apply {
-            adapter = selectCityAdapter
-            layoutManager = LinearLayoutManager(requireContext())
-        }
-    }
-
-    private fun setupRecyclerViewSelectBus() {
-        binding.selectBus.rvSelectBus.apply {
-            adapter = selectBusAdapter
-            layoutManager = GridLayoutManager(requireContext(), 4)
-        }
-    }
-
-    //Saved in pref selected city
-    private fun selectRegion() {
-        selectCityAdapter.setOnItemClickListener {
-            viewModel.setSelectCity(it.city)
-            viewModel.setCityId(it.rid)
-            viewModel.getRoutes(it.rid)
-            observeRoutes()
-        }
-    }
 }

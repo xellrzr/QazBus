@@ -18,17 +18,20 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun getAuth(
         phoneNumber: String,
-        language: String,
         password: String
     ): NetworkResult<Message> {
         pref.setPhoneNumber(phoneNumber)
-        val result =  safeApiCall { api.getAuth(phoneNumber,language,password) }
+        val result =  safeApiCall { api.getAuth(phoneNumber,password) }
         return if (result.data?.result?.length!! > 1) {
             pref.setAccessToken(result.data.result)
             result
         } else {
             result
         }
+    }
+
+    override fun isUserLoggedIn(): Boolean {
+        return pref.getAccessToken() != null
     }
 
 }

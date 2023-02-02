@@ -11,7 +11,7 @@ import com.example.quzbus.R
 
 class CustomButton(context: Context, attributeSet: AttributeSet): LinearLayout(context, attributeSet) {
 
-    private var arrowImage: ImageView
+    private var arrowImage: View
     private var busNumber: TextView
     private var busOnline: TextView
     private var card: CardView
@@ -19,17 +19,17 @@ class CustomButton(context: Context, attributeSet: AttributeSet): LinearLayout(c
     init {
         //Inflate layout
         View.inflate(context, R.layout.item_custom_button, this)
-        arrowImage = findViewById(R.id.iv_direction)
+        arrowImage = findViewById(R.id.view_direction)
         busNumber = findViewById(R.id.tv_bus_number)
         busOnline = findViewById(R.id.tv_bus_online)
         card = findViewById(R.id.card)
 
         //set on click listener
         arrowImage.setOnClickListener {
-            if (arrowImage.drawable == resources.getDrawable(R.drawable.up_arrow)) {
-                arrowImage.setImageResource(R.drawable.down_arrow)
+            if (arrowImage.foreground == resources.getDrawable(R.drawable.arrow_up)) {
+                arrowImage.foreground = resources.getDrawable(R.drawable.arrow_up)
             } else {
-                arrowImage.setImageResource(R.drawable.up_arrow)
+                arrowImage.foreground = resources.getDrawable(R.drawable.arrow_down)
             }
         }
     }

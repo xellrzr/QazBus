@@ -4,10 +4,12 @@ import com.example.quzbus.data.remote.QazBusApi
 import com.example.quzbus.data.repositoryImpl.AuthRepositoryImpl
 import com.example.quzbus.data.repositoryImpl.CitiesRepositoryImpl
 import com.example.quzbus.data.repositoryImpl.RoutesRepositoryImpl
+import com.example.quzbus.data.repositoryImpl.SingleRouteRepositoryImpl
 import com.example.quzbus.data.sharedpref.AppSharedPreferences
 import com.example.quzbus.domain.repository.AuthRepository
 import com.example.quzbus.domain.repository.CitiesRepository
 import com.example.quzbus.domain.repository.RoutesRepository
+import com.example.quzbus.domain.repository.SingleRouteRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -17,6 +19,15 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
+
+    @Singleton
+    @Provides
+    fun provideSingleRouteRepository(
+        api: QazBusApi,
+        sharedPreferences: AppSharedPreferences
+    ): SingleRouteRepository {
+        return SingleRouteRepositoryImpl(api,sharedPreferences)
+    }
 
     @Singleton
     @Provides
