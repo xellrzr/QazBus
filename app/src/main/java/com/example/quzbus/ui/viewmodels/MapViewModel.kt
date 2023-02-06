@@ -8,7 +8,9 @@ import com.example.quzbus.R
 import com.example.quzbus.data.models.AuthFormState
 import com.example.quzbus.data.models.response.Message
 import com.example.quzbus.data.models.response.Routes
-import com.example.quzbus.data.models.response.singleroute.BusRoute
+import com.example.quzbus.data.models.response.bus.RouteBuses
+import com.example.quzbus.data.models.response.singlerouteresponse.GetBusRouteResponse
+import com.example.quzbus.domain.models.busroute.BusRoute
 import com.example.quzbus.domain.repository.AuthRepository
 import com.example.quzbus.domain.repository.CitiesRepository
 import com.example.quzbus.domain.repository.RoutesRepository
@@ -41,8 +43,13 @@ class MapViewModel @Inject constructor(
     private val _getRoutesResponse: MutableLiveData<NetworkResult<Routes>> = MutableLiveData()
     val getRoutesResponse: LiveData<NetworkResult<Routes>> = _getRoutesResponse
 
+    //Ответ на запрос получения маршрута
     private val _getSingleRouteResponse: MutableLiveData<NetworkResult<BusRoute>> = MutableLiveData()
     val getSingleRouteResponse: LiveData<NetworkResult<BusRoute>> = _getSingleRouteResponse
+
+    //Ответ на запрос получения автобусов
+    private val _getSingleRouteBusesResponse: MutableLiveData<NetworkResult<RouteBuses>> = MutableLiveData()
+    val getSingleRouteBusesResponse: LiveData<NetworkResult<RouteBuses>> = _getSingleRouteBusesResponse
 
     fun getCities(){
         viewModelScope.launch {

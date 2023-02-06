@@ -1,5 +1,6 @@
 package com.example.quzbus.ui.fragments
 
+import android.content.Context
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -10,6 +11,7 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.viewbinding.library.fragment.viewBinding
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -22,16 +24,24 @@ import com.example.quzbus.ui.adapters.SelectCityAdapter
 import com.example.quzbus.ui.viewmodels.MapViewModel
 import com.example.quzbus.utils.NetworkResult
 import com.example.quzbus.utils.afterTextChanged
+import com.mapbox.api.directions.v5.models.DirectionsRoute
+import com.mapbox.geojson.Point
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
-import com.mapbox.services.android.navigation.v5.navigation.NavigationRoute
+import com.mapbox.maps.plugin.annotation.annotations
+import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
+import com.mapbox.maps.plugin.annotation.generated.createCircleAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
 import com.redmadrobot.inputmask.MaskedTextChangedListener
 import dagger.hilt.android.AndroidEntryPoint
 
-var mapView: MapView? = null
+//var mapView: MapView? = null
 
 @AndroidEntryPoint
 class MapFragment : Fragment() {
+
+    private lateinit var mapView: MapView
 
     private val binding: FragmentMapBinding by viewBinding()
     private val selectCityAdapter by lazy { SelectCityAdapter(requireContext()) }
@@ -43,6 +53,7 @@ class MapFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
+
         return inflater.inflate(R.layout.fragment_map, container, false)
     }
 
@@ -50,40 +61,30 @@ class MapFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         mapView = binding.mapView
-        mapView?.getMapboxMap()?.loadStyleUri(Style.MAPBOX_STREETS)
+        mapView.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS)
 
+        val annotationApi = mapView.annotations
 
-        // Create a Mapbox map
-        mapView.getMapAsync { mapboxMap ->
-            // Calculate the route using Mapbox Navigation
-            val navigationRoute = NavigationRoute.builder(this)
-                .accessToken(getString(R.string.mapbox_access_token))
-                .coordinates(startPoint, endPoint)
-                .build()
-            navigationRoute.getRoute(object : Callback<DirectionsResponse> {
-                override fun onResponse(call: Call<DirectionsResponse>, response: Response<DirectionsResponse>) {
-                    val directionsRoute = response.body()?.routes()?.get(0)
-                    if (directionsRoute != null) {
-                        // Convert the route into a series of LatLng objects
-                        val routeCoordinates = LineString.fromPolyline(directionsRoute.geometry()!!, PRECISION_6).coordinates()
-                        val latLngs = ArrayList<LatLng>()
-                        for (point in routeCoordinates) {
-                            latLngs.add(LatLng(point.latitude(), point.longitude()))
-                        }
-                        // Draw the route on the map using a polyline
-                        val polyline = mapboxMap.addPolyline(PolylineOptions()
-                            .addAll(latLngs)
-                            .color(ContextCompat.getColor(this@MainActivity, R.color.mapbox_blue))
-                            .width(5f))
-                    }
-                }
-                override fun onFailure(call: Call<DirectionsResponse>, throwable: Throwable) {
-                    Timber.e(throwable)
-                }
-            })
-        }
+        //Draw line
+        val polylineAnnotationManager = annotationApi.createPolylineAnnotationManager()
 
+        //Draw circle
+        val circleAnnotationManager = annotationApi.createCircleAnnotationManager()
 
+        //Draw point
+        val pointAnnotationManager = annotationApi.createPointAnnotationManager()
+
+        val points = listOf(
+            Point.fromLngLat(69.10, 54.85),
+            Point.fromLngLat(69.15, 54.89)
+        )
+
+        val polylineAnnotationOptions = PolylineAnnotationOptions()
+            .withPoints(points)
+            .withLineColor(ContextCompat.getColor(requireContext(), R.color.orange_500))
+            .withLineWidth(R.dimen.bus_5.toDouble())
+
+        polylineAnnotationManager.create(polylineAnnotationOptions)
 
         isShowAuthField()
         addPhoneNumberMask()
@@ -94,6 +95,18 @@ class MapFragment : Fragment() {
         observeCities()
         checkPhoneNumberCodeDataChanged()
         setSmsCode()
+    }
+
+    private fun getSingleRoute() {
+        selectBusAdapter.setOnItemClickListener {
+            viewModel.getSingleRoute(it.route)
+        }
+    }
+
+    private fun observeSingleRote() {
+        viewModel.getSingleRouteResponse.observe(viewLifecycleOwner) {
+            //TODO
+        }
     }
 
     private fun isShowAuthField() {
@@ -146,12 +159,6 @@ class MapFragment : Fragment() {
         selectCityAdapter.setOnItemClickListener {
             viewModel.getRoutes(it.rid)
             observeRoutes()
-        }
-    }
-
-    private fun getSingleRoute() {
-        selectBusAdapter.setOnItemClickListener {
-            viewModel.getSingleRoute(it.route)
         }
     }
 

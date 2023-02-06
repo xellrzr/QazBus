@@ -1,8 +1,9 @@
 package com.example.quzbus.data.remote
 
-import com.example.quzbus.data.models.response.singleroute.BusRoute
+import com.example.quzbus.data.models.response.singlerouteresponse.GetBusRouteResponse
 import com.example.quzbus.data.models.response.Message
 import com.example.quzbus.data.models.response.Routes
+import com.example.quzbus.data.models.response.bus.RouteBuses
 import retrofit2.Response
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -42,11 +43,21 @@ interface QazBusApi {
 
     @FormUrlEncoded
     @POST("userroute")
-    suspend fun getRoute(
+    suspend fun getBusRoute(
         @Field("route") route: String,
         @Field("sid") sid: String,
         @Field("phone") phone: String,
         @Field("city") city: Int,
         @Field("id") id: Int = 1
-    ): Response<BusRoute>
+    ): Response<GetBusRouteResponse>
+
+    @FormUrlEncoded
+    @POST("userlocation")
+    suspend fun getBuses(
+        @Field("route") route: String,
+        @Field("sid") sid: String,
+        @Field("phone") phone: String,
+        @Field("city") city: Int,
+        @Field("id") id: Int = 1
+    ): Response<RouteBuses>
 }

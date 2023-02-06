@@ -9,4 +9,7 @@
     <dimen name="dimen_36">36dp</dimen>
     <dimen name="dimen_100">100dp</dimen>
 
+    <!-- Bus route width-->
+    <dimen name="bus_5">5dp</dimen>
+
 </resources>

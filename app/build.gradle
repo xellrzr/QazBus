@@ -50,11 +50,13 @@ dependencies {
 
     // MapBox
     implementation 'com.mapbox.maps:android:10.10.1'
-    implementation 'com.mapbox.mapboxsdk:mapbox-sdk-navigation:0.44.0'
-    implementation 'com.mapbox.mapboxsdk:mapbox-android-navigation-ui:0.26.0'
-    implementation 'com.mapbox.mapboxsdk:mapbox-sdk-core:7.0.0'
-    implementation 'com.mapbox.mapboxsdk:mapbox-sdk-maps:7.0.0'
-    implementation 'com.google.android.gms:play-services-location:21.0.1'
+    implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:6.10.0'
+
+    implementation 'com.mapbox.mapboxsdk:mapbox-android-gestures:0.8.0'
+
+    implementation 'androidx.annotation:annotation:1.5.0'
+
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.6.21"
 
     // Architectural Components
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:2.5.1"

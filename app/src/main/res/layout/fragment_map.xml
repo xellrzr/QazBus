@@ -12,9 +12,9 @@
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        mapbox:mapbox_cameraTargetLat="54.52"
-        mapbox:mapbox_cameraTargetLng="69.09"
-        mapbox:mapbox_cameraZoom="9.0"/>
+        mapbox:mapbox_cameraTargetLat="54.87279"
+        mapbox:mapbox_cameraTargetLng="69.143"
+        mapbox:mapbox_cameraZoom="13.0" />
 
     <include layout="@layout/fragment_auth"
         android:id="@+id/auth_field"

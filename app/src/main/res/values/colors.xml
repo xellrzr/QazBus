@@ -9,4 +9,12 @@
     <color name="white">#FFFFFFFF</color>
 
     <color name="grey_50">#E8E8E8</color>
+
+    <!-- Colors for bus route-->
+    <color name="blue_500">#3F51B5</color>
+    <color name="red_500">#E91E63</color>
+    <color name="green_500">#4CAF50</color>
+    <color name="orange_500">#FF5722</color>
+    <color name="magenta_500">#9C27B0</color>
+    <color name="yellow_500">#FFEB3B</color>
 </resources>
