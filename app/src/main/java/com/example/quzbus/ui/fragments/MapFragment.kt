@@ -36,12 +36,14 @@ import dagger.hilt.android.AndroidEntryPoint
 class MapFragment : Fragment() {
 
     private lateinit var mapView: MapView
+    private lateinit var polylineAnnotationManager: PolylineAnnotationManager
+    private lateinit var circleAnnotationManager: CircleAnnotationManager
+    private lateinit var pointAnnotationManager: PointAnnotationManager
 
     private val binding: FragmentMapBinding by viewBinding()
     private val selectCityAdapter by lazy { SelectCityAdapter(requireContext()) }
     private val selectBusAdapter by lazy { SelectBusAdapter(requireContext()) }
     private val viewModel: MapViewModel by viewModels()
-    private var polylineAnnotationManager: PolylineAnnotationManager? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -64,10 +66,10 @@ class MapFragment : Fragment() {
         polylineAnnotationManager = annotationApi.createPolylineAnnotationManager()
 
         //Draw circle
-        val circleAnnotationManager = annotationApi.createCircleAnnotationManager()
+        circleAnnotationManager = annotationApi.createCircleAnnotationManager()
 
         //Draw point
-        val pointAnnotationManager = annotationApi.createPointAnnotationManager()
+        pointAnnotationManager = annotationApi.createPointAnnotationManager()
 
         isShowAuthField()
         addPhoneNumberMask()
@@ -78,13 +80,12 @@ class MapFragment : Fragment() {
         observeCities()
         checkPhoneNumberCodeDataChanged()
         setSmsCode()
-        observeRoutesX()
+        observeRoutes()
     }
 
     private fun getSingleRoute() {
         selectBusAdapter.setOnItemClickListener {
-//            viewModel.getSingleRoute(it.name)
-            viewModel.getSingleRouteX(it.name)
+            viewModel.getRoute(it.name)
         }
     }
 
@@ -136,11 +137,19 @@ class MapFragment : Fragment() {
 
     private fun selectRegion() {
         selectCityAdapter.setOnItemClickListener {
-//            viewModel.getRoutes(it.rid)
-            viewModel.getRoutesX(it.rid)
-            binding.selectCity.root.visibility = View.GONE
-            binding.selectBus.root.visibility = View.VISIBLE
-//            observeRoutes()
+            viewModel.getRoutes(it.rid)
+            observeRouteStateLoading()
+        }
+    }
+
+    private fun observeRouteStateLoading() {
+        viewModel.routeState.observe(viewLifecycleOwner) {
+            if (it.isLoading) {
+                binding.selectCity.root.visibility = View.GONE
+                binding.progressBar.visibility = View.VISIBLE
+            } else {
+                binding.selectBus.root.visibility = View.VISIBLE
+            }
         }
     }
 
@@ -189,12 +198,12 @@ class MapFragment : Fragment() {
 
     private fun observeCities() {
         viewModel.getCitiesResponse.observe(viewLifecycleOwner) { result ->
-
             when (result) {
                 is NetworkResult.Loading -> {
-                    Toast.makeText(requireContext(), "LOADING", Toast.LENGTH_SHORT).show()
+                    binding.pbMain.visibility = View.VISIBLE
                 }
                 is NetworkResult.Success -> {
+                    binding.pbMain.visibility = View.GONE
                     val data = result.data?.regions
                     if (data != null) {
                         result.data.let { selectCityAdapter.setNewData(it) }
@@ -209,7 +218,6 @@ class MapFragment : Fragment() {
 
     private fun observeAuth() {
         viewModel.getAuthResponse.observe(viewLifecycleOwner) { result ->
-
             when(result) {
                 is NetworkResult.Loading -> {
                     Toast.makeText(requireContext(), "LOADING ROUTES", Toast.LENGTH_SHORT).show()
@@ -227,33 +235,10 @@ class MapFragment : Fragment() {
         }
     }
 
-//    private fun observeRoutes() {
-//        viewModel.getRoutes.observe(viewLifecycleOwner) { result ->
-//
-//            when(result) {
-//                is NetworkResult.Loading -> {
-//                    binding.selectCity.root.visibility = View.GONE
-//                    binding.progressBar.visibility = View.VISIBLE
-//                    binding.selectBus.root.visibility = View.VISIBLE
-//                }
-//                is NetworkResult.Success -> {
-//                    val data = result.data?.routes
-//                    if (data != null ) {
-//                        result.data.let { selectBusAdapter.setNewData(it) }
-//                        binding.progressBar.visibility = View.GONE
-//                    }
-//                }
-//                else -> {
-//                    Toast.makeText(requireContext(), "ERROR", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//        }
-//    }
 
-    private fun observeRoutesX() {
+    private fun observeRoutes() {
         viewModel.routeState.observe(viewLifecycleOwner) { result ->
             val data = result.routes
-
             val busList = mutableListOf<Route>()
             for (route in data.values) {
                 busList.add(route)
@@ -268,7 +253,7 @@ class MapFragment : Fragment() {
                         .withLineColor(ContextCompat.getColor(requireContext(), R.color.orange_500))
                         .withLineWidth(5.0)
 
-                    polylineAnnotationManager?.create(polylineAnnotationOptions)
+                    polylineAnnotationManager.create(polylineAnnotationOptions)
                 }
             }
         }

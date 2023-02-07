@@ -5,17 +5,13 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.quzbus.R
-import com.example.quzbus.data.models.AuthFormState
+import com.example.quzbus.domain.models.AuthFormState
 import com.example.quzbus.data.models.response.Message
 import com.example.quzbus.domain.models.RouteState
-import com.example.quzbus.domain.models.buses.RouteBusesState
-import com.example.quzbus.domain.models.busroute.BusRoute
 import com.example.quzbus.domain.models.routes.Route
-import com.example.quzbus.domain.models.routes.Routes
 import com.example.quzbus.domain.repository.AuthRepository
 import com.example.quzbus.domain.repository.CitiesRepository
 import com.example.quzbus.domain.repository.RoutesRepository
-import com.example.quzbus.domain.repository.SingleRouteRepository
 import com.example.quzbus.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -26,7 +22,6 @@ class MapViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val citiesRepository: CitiesRepository,
     private val routesRepository: RoutesRepository,
-    private val singleRouteRepository: SingleRouteRepository
 ) : ViewModel() {
 
     //Хранит ответ на запрос получение списка городов
@@ -35,7 +30,6 @@ class MapViewModel @Inject constructor(
 
     //Хранит ответ на запрос получение SMS - кода
     private val _getSmsCodeResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
-    val getSmsResponse: LiveData<NetworkResult<Message>> = _getSmsCodeResponse
 
     //Хранит ответ на запрос получение авторизации
     private val _getAuthResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
@@ -43,56 +37,11 @@ class MapViewModel @Inject constructor(
 
     //Хранит стейт и проверку на заполненность данных номер телефона и SMS код
     private val _authFormState: MutableLiveData<AuthFormState> = MutableLiveData()
-    val authFormState: LiveData<AuthFormState> = _authFormState
-
-    //Хранит ответ на запрос получение списка маршрутов(номера автобусов) для выбранного города
-    private val _getRoutes: MutableLiveData<NetworkResult<Routes>> = MutableLiveData()
-    val getRoutes: LiveData<NetworkResult<Routes>> = _getRoutes
-
-    //Хранит ответ на запрос получение маршрута для выбранного автобуса
-    private val _getSingleRoute: MutableLiveData<NetworkResult<BusRoute>> = MutableLiveData()
-    val getSingleRoute: LiveData<NetworkResult<BusRoute>> = _getSingleRoute
-
-    //Хранит ответ на запрос получение списка автобусов по выбранному маршруту
-    private val _getSingleRouteBuses: MutableLiveData<RouteBusesState> = MutableLiveData()
-    val getSingleRouteBuses: LiveData<RouteBusesState> = _getSingleRouteBuses
 
     //Хранит стейт со всеми маршрутами доступными для города
     //ХэшМап ключ - номер маршрута, значение - маршрут для этого номера
     private val _routeState: MutableLiveData<RouteState> = MutableLiveData()
     val routeState: LiveData<RouteState> = _routeState
-
-    fun getSingleRouteBuses(route: String) {
-        viewModelScope.launch {
-            val result = singleRouteRepository.getBusesRoutes(route)
-            when(result) {
-                is NetworkResult.Success -> {
-                    _getSingleRouteBuses.postValue(
-                        RouteBusesState(
-                            busRoutes = result.data?.busRoutes ?: emptyList(),
-                            isLoading = false
-                        )
-                    )
-                }
-                is NetworkResult.Error -> {
-                    _getSingleRouteBuses.postValue(
-                        RouteBusesState(
-                            busRoutes = result.data?.busRoutes ?: emptyList(),
-                            isLoading = false
-                        )
-                    )
-                }
-                is NetworkResult.Loading -> {
-                    _getSingleRouteBuses.postValue(
-                        RouteBusesState(
-                            busRoutes = result.data?.busRoutes ?: emptyList(),
-                            isLoading = true
-                        )
-                    )
-                }
-            }
-        }
-    }
 
     //Метод для получения списка городов
     fun getCities() {
@@ -118,24 +67,12 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    //Метод для получения маршрутов выбранного города
     fun getRoutes(cityId: Int) {
         viewModelScope.launch {
-            _getRoutes.postValue(NetworkResult.Loading())
-            _getRoutes.postValue(routesRepository.getRoutes(cityId))
-        }
-    }
-
-    fun getRoutesX(cityId: Int) {
-        viewModelScope.launch {
-            val result = routesRepository.getRoutes(cityId)
-
-            when(result) {
-
+            when(val result = routesRepository.getRoutes(cityId)) {
                 is NetworkResult.Success -> {
                     val routes = hashMapOf<String, Route>()
                     val dataRoutes = result.data?.routes ?: emptyList()
-
                     for (route in dataRoutes) {
                         routes[route.name] = route
                     }
@@ -167,23 +104,21 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun getSingleRouteX(route: String) {
+    fun getRoute(route: String) {
         viewModelScope.launch {
-            val result = singleRouteRepository.getSingleRoute(route)
+            val result = routesRepository.getRoute(route)
             val routes = _routeState.value?.routes
-//            val newRoutes = hashMapOf<String, Route>()
             when(result) {
-
                 is NetworkResult.Success -> {
                     if (routes?.containsKey(route) == true) {
-//                        newRoutes[route]?.routeA = result.data?.routeA ?: emptyList()
-
-                        routes[route]?.routeA = result.data?.routeA ?: emptyList()
-                        routes[route]?.routeB = result.data?.routeB ?: emptyList()
-                        routes[route]?.routeStopsA = result.data?.routeStopsA ?: emptyList()
-                        routes[route]?.routeStopsB = result.data?.routeStopsB ?: emptyList()
-                        routes[route]?.routeStart = result.data?.routeStart
-                        routes[route]?.routeFinish = result.data?.routeFinish
+                        routes[route]?.let { routeObj ->
+                            routeObj.routeA = result.data?.La?.map { it.toRouteCoordinates() }.orEmpty()
+                            routeObj.routeB = result.data?.Lb?.map { it.toRouteCoordinates() }.orEmpty()
+                            routeObj.routeStopsA = result.data?.Sa?.map { it.toRouteStops() }.orEmpty()
+                            routeObj.routeStopsB = result.data?.Sb?.map { it.toRouteStops() }.orEmpty()
+                            routeObj.routeStart = result.data?.Na
+                            routeObj.routeFinish = result.data?.Nb
+                        }
                     }
                     _routeState.postValue(
                         routes?.let {
@@ -195,10 +130,10 @@ class MapViewModel @Inject constructor(
                     )
                 }
                 is NetworkResult.Error -> {
-                    val routes = hashMapOf<String, Route>()
+                    val newRoutes = hashMapOf<String, Route>()
                     _routeState.postValue(
                         RouteState(
-                            routes = routes,
+                            routes = newRoutes,
                             error = "Can't load routes",
                             isLoading = false
                         )
@@ -212,14 +147,6 @@ class MapViewModel @Inject constructor(
                     )
                 }
             }
-        }
-    }
-
-    //Метод для получения маршрута выбранного номера автобуса
-    fun getSingleRoute(route: String) {
-        viewModelScope.launch {
-            _getSingleRoute.postValue(NetworkResult.Loading())
-            _getSingleRoute.postValue(singleRouteRepository.getSingleRoute(route))
         }
     }
 

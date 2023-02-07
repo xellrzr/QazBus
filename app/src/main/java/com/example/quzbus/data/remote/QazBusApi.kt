@@ -1,9 +1,9 @@
 package com.example.quzbus.data.remote
 
-import com.example.quzbus.data.models.response.singlerouteresponse.GetBusRouteResponse
+import com.example.quzbus.data.models.response.getroute.GetRouteResponse
 import com.example.quzbus.data.models.response.Message
-import com.example.quzbus.data.models.response.routesresponse.GetRoutesResponse
-import com.example.quzbus.data.models.response.busesresponse.GetRouteBusesResponse
+import com.example.quzbus.data.models.response.getroutes.GetRoutesResponse
+import com.example.quzbus.data.models.response.getbuses.GetBusesResponse
 import retrofit2.Response
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -51,7 +51,7 @@ interface QazBusApi {
         @Field("phone") phone: String,
         @Field("city") city: Int,
         @Field("id") id: Int = 1
-    ): Response<GetBusRouteResponse>
+    ): Response<GetRouteResponse>
 
     //Метод на получение списка автобусов для выбранного маршрута
     @FormUrlEncoded
@@ -62,5 +62,5 @@ interface QazBusApi {
         @Field("phone") phone: String,
         @Field("city") city: Int,
         @Field("id") id: Int = 1
-    ): Response<GetRouteBusesResponse>
+    ): Response<GetBusesResponse>
 }

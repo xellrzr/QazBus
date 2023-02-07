@@ -8,13 +8,20 @@
     android:layout_height="match_parent"
     tools:context=".ui.fragments.MapFragment">
 
+    <ProgressBar
+        android:id="@+id/pb_main"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone"/>
+
     <com.mapbox.maps.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         mapbox:mapbox_cameraTargetLat="54.87279"
         mapbox:mapbox_cameraTargetLng="69.143"
-        mapbox:mapbox_cameraZoom="13.0" />
+        mapbox:mapbox_cameraZoom="12.0" />
 
     <include layout="@layout/fragment_auth"
         android:id="@+id/auth_field"

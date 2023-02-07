@@ -1,8 +1,6 @@
 package com.example.quzbus.domain.models.routes
 
-import com.example.quzbus.domain.models.buses.SingleBusRoute
-import com.example.quzbus.domain.models.busroute.RouteCoordinates
-import com.example.quzbus.domain.models.busroute.RouteStops
+import com.example.quzbus.domain.models.bus.Bus
 
 data class Route(
     val name: String,
@@ -13,6 +11,6 @@ data class Route(
     var routeStopsB: List<RouteStops> = emptyList(), //Остановки Б
     var routeStart: String? = null, //Старт маршрута
     var routeFinish: String? = null, //Финиш маршрута
-    val busPoints: List<SingleBusRoute> = emptyList(), //Автобусы
+    val busPoints: List<Bus> = emptyList(), //Автобусы
     val isFavorite: Boolean = false, // Избранное
 )
