@@ -1,28 +1,30 @@
 package com.example.quzbus.data.models.response.singlerouteresponse
 
 import com.example.quzbus.domain.models.busroute.BusRoute
+import com.example.quzbus.domain.models.routes.Route
 
 data class GetBusRouteResponse(
-    val routeA: List<RouteCoordinatesResponse>, //Маршрут А
-    val routeB: List<RouteCoordinatesResponse>, //Маршрут Б
-    val routeStart: String, //Старт маршрута
-    val routeFinish: String, //Финиш маршрута
-    val routeName: String, //Имя маршрута
-    val routeStopsA: List<RouteStopsResponse>, //Остановки А
-    val routeStopsB: List<RouteStopsResponse>, //Остановки Б
-    val tp: String //Ничего
+    val La: List<La>, //Маршрут А
+    val Lb: List<Lb>, //Маршрут Б
+    val Na: String, //Старт маршрута
+    val Nb: String, //Финиш маршрута
+    val Nm: String, //Имя маршрута
+    val Sa: List<Sa>, //Остановки А
+    val Sb: List<Sb>, //Остановки Б
+    val Tp: String //Ничего
 ) {
 
     fun toBusRoute(): BusRoute {
         return BusRoute(
-            routeA = routeA.map { it.toRouteCoordinates() },
-            routeB = routeB.map { it.toRouteCoordinates() },
-            routeStart = routeStart,
-            routeFinish = routeFinish,
-            routeName = routeName,
-            routeStopsA = routeStopsA.map { it.toRouteStops() },
-            routeStopsB = routeStopsB.map { it.toRouteStops() },
-            tp = tp
+            routeA = La.map { it.toRouteCoordinates() },
+            routeB = Lb.map { it.toRouteCoordinates() },
+            routeStart = Na,
+            routeFinish = Nb,
+            routeName = Nm,
+            routeStopsA = Sa.map { it.toRouteStops() },
+            routeStopsB = Sb.map { it.toRouteStops() },
+            tp = Tp
         )
     }
+
 }

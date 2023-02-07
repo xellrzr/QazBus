@@ -2,8 +2,8 @@ package com.example.quzbus.data.remote
 
 import com.example.quzbus.data.models.response.singlerouteresponse.GetBusRouteResponse
 import com.example.quzbus.data.models.response.Message
-import com.example.quzbus.data.models.response.Routes
-import com.example.quzbus.data.models.response.bus.RouteBuses
+import com.example.quzbus.data.models.response.routesresponse.GetRoutesResponse
+import com.example.quzbus.data.models.response.busesresponse.GetRouteBusesResponse
 import retrofit2.Response
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded
@@ -31,6 +31,7 @@ interface QazBusApi {
         @Field("lang") lang: String = "0"
     ): Response<Message>
 
+    //Метод на получение списка маршрутов для города
     @FormUrlEncoded
     @POST("userauto")
     suspend fun getRoutes(
@@ -39,11 +40,12 @@ interface QazBusApi {
         @Field("city") city: Int,
         @Field("id") id: Int = 0,//0
         @Field("route") route: Int = 0//0
-    ): Response<Routes>
+    ): Response<GetRoutesResponse>
 
+    //Метод на получение маршрута
     @FormUrlEncoded
     @POST("userroute")
-    suspend fun getBusRoute(
+    suspend fun getRoute(
         @Field("route") route: String,
         @Field("sid") sid: String,
         @Field("phone") phone: String,
@@ -51,6 +53,7 @@ interface QazBusApi {
         @Field("id") id: Int = 1
     ): Response<GetBusRouteResponse>
 
+    //Метод на получение списка автобусов для выбранного маршрута
     @FormUrlEncoded
     @POST("userlocation")
     suspend fun getBuses(
@@ -59,5 +62,5 @@ interface QazBusApi {
         @Field("phone") phone: String,
         @Field("city") city: Int,
         @Field("id") id: Int = 1
-    ): Response<RouteBuses>
+    ): Response<GetRouteBusesResponse>
 }

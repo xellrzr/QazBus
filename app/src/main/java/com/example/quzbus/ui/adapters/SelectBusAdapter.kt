@@ -7,9 +7,9 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.example.quzbus.R
-import com.example.quzbus.data.models.response.Route
-import com.example.quzbus.data.models.response.Routes
 import com.example.quzbus.databinding.ItemCustomButtonBinding
+import com.example.quzbus.domain.models.routes.Route
+import com.example.quzbus.domain.models.routes.Routes
 import com.example.quzbus.utils.MyDiffUtil
 
 class SelectBusAdapter(
@@ -23,7 +23,7 @@ class SelectBusAdapter(
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(route: Route) {
             binding.apply {
-                tvBusNumber.text = route.route
+                tvBusNumber.text = route.name
                 tvBusOnline.text = route.auto
             }
             itemView.setOnClickListener {
@@ -54,6 +54,13 @@ class SelectBusAdapter(
         val diffUtil = MyDiffUtil(busRoutes, newData.routes)
         val diffUtilResult = DiffUtil.calculateDiff(diffUtil)
         busRoutes = newData.routes
+        diffUtilResult.dispatchUpdatesTo(this)
+    }
+
+    fun setNewDataX(newData: List<Route>) {
+        val diffUtil = MyDiffUtil(busRoutes, newData)
+        val diffUtilResult = DiffUtil.calculateDiff(diffUtil)
+        busRoutes = newData
         diffUtilResult.dispatchUpdatesTo(this)
     }
 

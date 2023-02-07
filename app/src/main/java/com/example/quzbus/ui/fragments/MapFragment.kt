@@ -1,6 +1,5 @@
 package com.example.quzbus.ui.fragments
 
-import android.content.Context
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -19,24 +18,19 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.quzbus.R
 import com.example.quzbus.databinding.FragmentMapBinding
+import com.example.quzbus.domain.models.routes.Route
 import com.example.quzbus.ui.adapters.SelectBusAdapter
 import com.example.quzbus.ui.adapters.SelectCityAdapter
 import com.example.quzbus.ui.viewmodels.MapViewModel
 import com.example.quzbus.utils.NetworkResult
 import com.example.quzbus.utils.afterTextChanged
-import com.mapbox.api.directions.v5.models.DirectionsRoute
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
 import com.mapbox.maps.plugin.annotation.annotations
-import com.mapbox.maps.plugin.annotation.generated.PolylineAnnotationOptions
-import com.mapbox.maps.plugin.annotation.generated.createCircleAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
-import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
+import com.mapbox.maps.plugin.annotation.generated.*
 import com.redmadrobot.inputmask.MaskedTextChangedListener
 import dagger.hilt.android.AndroidEntryPoint
-
-//var mapView: MapView? = null
 
 @AndroidEntryPoint
 class MapFragment : Fragment() {
@@ -47,6 +41,7 @@ class MapFragment : Fragment() {
     private val selectCityAdapter by lazy { SelectCityAdapter(requireContext()) }
     private val selectBusAdapter by lazy { SelectBusAdapter(requireContext()) }
     private val viewModel: MapViewModel by viewModels()
+    private var polylineAnnotationManager: PolylineAnnotationManager? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -66,25 +61,13 @@ class MapFragment : Fragment() {
         val annotationApi = mapView.annotations
 
         //Draw line
-        val polylineAnnotationManager = annotationApi.createPolylineAnnotationManager()
+        polylineAnnotationManager = annotationApi.createPolylineAnnotationManager()
 
         //Draw circle
         val circleAnnotationManager = annotationApi.createCircleAnnotationManager()
 
         //Draw point
         val pointAnnotationManager = annotationApi.createPointAnnotationManager()
-
-        val points = listOf(
-            Point.fromLngLat(69.10, 54.85),
-            Point.fromLngLat(69.15, 54.89)
-        )
-
-        val polylineAnnotationOptions = PolylineAnnotationOptions()
-            .withPoints(points)
-            .withLineColor(ContextCompat.getColor(requireContext(), R.color.orange_500))
-            .withLineWidth(R.dimen.bus_5.toDouble())
-
-        polylineAnnotationManager.create(polylineAnnotationOptions)
 
         isShowAuthField()
         addPhoneNumberMask()
@@ -95,17 +78,13 @@ class MapFragment : Fragment() {
         observeCities()
         checkPhoneNumberCodeDataChanged()
         setSmsCode()
+        observeRoutesX()
     }
 
     private fun getSingleRoute() {
         selectBusAdapter.setOnItemClickListener {
-            viewModel.getSingleRoute(it.route)
-        }
-    }
-
-    private fun observeSingleRote() {
-        viewModel.getSingleRouteResponse.observe(viewLifecycleOwner) {
-            //TODO
+//            viewModel.getSingleRoute(it.name)
+            viewModel.getSingleRouteX(it.name)
         }
     }
 
@@ -157,8 +136,11 @@ class MapFragment : Fragment() {
 
     private fun selectRegion() {
         selectCityAdapter.setOnItemClickListener {
-            viewModel.getRoutes(it.rid)
-            observeRoutes()
+//            viewModel.getRoutes(it.rid)
+            viewModel.getRoutesX(it.rid)
+            binding.selectCity.root.visibility = View.GONE
+            binding.selectBus.root.visibility = View.VISIBLE
+//            observeRoutes()
         }
     }
 
@@ -245,28 +227,51 @@ class MapFragment : Fragment() {
         }
     }
 
-    private fun observeRoutes() {
-        viewModel.getRoutesResponse.observe(viewLifecycleOwner) { result ->
+//    private fun observeRoutes() {
+//        viewModel.getRoutes.observe(viewLifecycleOwner) { result ->
+//
+//            when(result) {
+//                is NetworkResult.Loading -> {
+//                    binding.selectCity.root.visibility = View.GONE
+//                    binding.progressBar.visibility = View.VISIBLE
+//                    binding.selectBus.root.visibility = View.VISIBLE
+//                }
+//                is NetworkResult.Success -> {
+//                    val data = result.data?.routes
+//                    if (data != null ) {
+//                        result.data.let { selectBusAdapter.setNewData(it) }
+//                        binding.progressBar.visibility = View.GONE
+//                    }
+//                }
+//                else -> {
+//                    Toast.makeText(requireContext(), "ERROR", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//        }
+//    }
 
-            when(result) {
-                is NetworkResult.Loading -> {
-                    binding.selectCity.root.visibility = View.GONE
-                    binding.progressBar.visibility = View.VISIBLE
-                    binding.selectBus.root.visibility = View.VISIBLE
-                }
-                is NetworkResult.Success -> {
-                    val data = result.data?.routes
-                    if (data != null ) {
-                        result.data.let { selectBusAdapter.setNewData(it) }
-                        binding.progressBar.visibility = View.GONE
-                    }
-                }
-                else -> {
-                    Toast.makeText(requireContext(), "ERROR", Toast.LENGTH_SHORT).show()
+    private fun observeRoutesX() {
+        viewModel.routeState.observe(viewLifecycleOwner) { result ->
+            val data = result.routes
+
+            val busList = mutableListOf<Route>()
+            for (route in data.values) {
+                busList.add(route)
+            }
+            selectBusAdapter.setNewDataX(busList)
+
+            for (route in data) {
+                if (route.value.routeA.isNotEmpty()) {
+                    val points = route.value.routeA.map { Point.fromLngLat(it.x, it.y) }
+                    val polylineAnnotationOptions = PolylineAnnotationOptions()
+                        .withPoints(points)
+                        .withLineColor(ContextCompat.getColor(requireContext(), R.color.orange_500))
+                        .withLineWidth(5.0)
+
+                    polylineAnnotationManager?.create(polylineAnnotationOptions)
                 }
             }
         }
     }
-
 
 }
