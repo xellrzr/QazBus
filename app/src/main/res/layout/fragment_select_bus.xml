@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
-        app:spanCount="4"
+        app:spanCount="5"
         android:layout_gravity="center_horizontal"
         tools:listitem="@layout/item_custom_button"
         android:layout_margin="@dimen/dimen_12" />

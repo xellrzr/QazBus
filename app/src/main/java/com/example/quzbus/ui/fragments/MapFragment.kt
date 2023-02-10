@@ -1,5 +1,7 @@
 package com.example.quzbus.ui.fragments
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -18,6 +20,8 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.quzbus.R
 import com.example.quzbus.databinding.FragmentMapBinding
+import com.example.quzbus.domain.models.routes.Direction
+import com.example.quzbus.domain.models.routes.Pallet
 import com.example.quzbus.domain.models.routes.Route
 import com.example.quzbus.ui.adapters.SelectBusAdapter
 import com.example.quzbus.ui.adapters.SelectCityAdapter
@@ -36,13 +40,10 @@ import dagger.hilt.android.AndroidEntryPoint
 class MapFragment : Fragment() {
 
     private lateinit var mapView: MapView
-    private lateinit var polylineAnnotationManager: PolylineAnnotationManager
-    private lateinit var circleAnnotationManager: CircleAnnotationManager
-    private lateinit var pointAnnotationManager: PointAnnotationManager
 
     private val binding: FragmentMapBinding by viewBinding()
     private val selectCityAdapter by lazy { SelectCityAdapter(requireContext()) }
-    private val selectBusAdapter by lazy { SelectBusAdapter(requireContext()) }
+    private val selectBusAdapter by lazy { SelectBusAdapter() }
     private val viewModel: MapViewModel by viewModels()
 
     override fun onCreateView(
@@ -62,14 +63,17 @@ class MapFragment : Fragment() {
 
         val annotationApi = mapView.annotations
 
-        //Draw line
-        polylineAnnotationManager = annotationApi.createPolylineAnnotationManager()
+        for (pallet in Pallet.values()) {
+            lines[pallet] = annotationApi.createPolylineAnnotationManager()
+        }
 
-        //Draw circle
-        circleAnnotationManager = annotationApi.createCircleAnnotationManager()
+        for (pallet in Pallet.values()) {
+            circles[pallet] = annotationApi.createCircleAnnotationManager()
+        }
 
-        //Draw point
-        pointAnnotationManager = annotationApi.createPointAnnotationManager()
+        for (pallet in Pallet.values()) {
+            points[pallet] = annotationApi.createPointAnnotationManager()
+        }
 
         isShowAuthField()
         addPhoneNumberMask()
@@ -83,9 +87,15 @@ class MapFragment : Fragment() {
         observeRoutes()
     }
 
-    private fun getSingleRoute() {
+    private fun selectRoute() {
         selectBusAdapter.setOnItemClickListener {
-            viewModel.getRoute(it.name)
+            val success = viewModel.selectRoute(it.name)
+            if (!success) {
+                Toast.makeText(
+                    requireContext(),
+                    "Выбрано максимальное количество маршрутов", Toast.LENGTH_SHORT
+                ).show()
+            }
         }
     }
 
@@ -104,7 +114,7 @@ class MapFragment : Fragment() {
     private fun setupListeners() {
         getSmsCode()
         selectRegion()
-        getSingleRoute()
+        selectRoute()
     }
 
     private fun setupRecyclerViewSelectCity() {
@@ -117,7 +127,7 @@ class MapFragment : Fragment() {
     private fun setupRecyclerViewSelectBus() {
         binding.selectBus.rvSelectBus.apply {
             adapter = selectBusAdapter
-            layoutManager = GridLayoutManager(requireContext(), 4)
+            layoutManager = GridLayoutManager(requireContext(), 5)
         }
     }
 
@@ -138,18 +148,8 @@ class MapFragment : Fragment() {
     private fun selectRegion() {
         selectCityAdapter.setOnItemClickListener {
             viewModel.getRoutes(it.rid)
-            observeRouteStateLoading()
-        }
-    }
-
-    private fun observeRouteStateLoading() {
-        viewModel.routeState.observe(viewLifecycleOwner) {
-            if (it.isLoading) {
-                binding.selectCity.root.visibility = View.GONE
-                binding.progressBar.visibility = View.VISIBLE
-            } else {
-                binding.selectBus.root.visibility = View.VISIBLE
-            }
+            binding.selectCity.root.visibility = View.GONE
+            binding.selectBus.root.visibility = View.VISIBLE
         }
     }
 
@@ -163,7 +163,6 @@ class MapFragment : Fragment() {
                     )
                 }
             }
-
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
@@ -235,7 +234,6 @@ class MapFragment : Fragment() {
         }
     }
 
-
     private fun observeRoutes() {
         viewModel.routeState.observe(viewLifecycleOwner) { result ->
             val data = result.routes
@@ -243,20 +241,100 @@ class MapFragment : Fragment() {
             for (route in data.values) {
                 busList.add(route)
             }
-            selectBusAdapter.setNewDataX(busList)
+            selectBusAdapter.setNewData(busList)
 
             for (route in data) {
-                if (route.value.routeA.isNotEmpty()) {
-                    val points = route.value.routeA.map { Point.fromLngLat(it.x, it.y) }
-                    val polylineAnnotationOptions = PolylineAnnotationOptions()
-                        .withPoints(points)
-                        .withLineColor(ContextCompat.getColor(requireContext(), R.color.orange_500))
-                        .withLineWidth(5.0)
-
-                    polylineAnnotationManager.create(polylineAnnotationOptions)
+                val busRoute = route.value
+                if(busRoute.selectedDirection != null) {
+                    val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
+                    val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
+                    val points = routePoints.map { Point.fromLngLat(it.x, it.y) }
+                    val busPoints = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
+                    val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
+                    val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
+                    busRoute.pallet?.let {
+                        drawBuses(busPoints, it)
+                        drawRoute(points, it)
+                        drawFlags(flagPoint, it)
+                    }
+                } else {
+                    busRoute.pallet?.let {
+                        drawBuses(emptyList(), it)
+                        drawRoute(emptyList(), it)
+                        drawFlags(null, it)
+                    }
                 }
             }
         }
     }
 
+    private var lines = HashMap<Pallet, PolylineAnnotationManager>()
+    private var circles = HashMap<Pallet, CircleAnnotationManager>()
+    private var points = HashMap<Pallet, PointAnnotationManager>()
+
+    private fun drawBuses(points: List<Point>, pallet: Pallet) {
+        val color = colorFor(pallet)
+        val circleAnnotationManager = circles[pallet]
+        circleAnnotationManager?.deleteAll()
+
+        val options = mutableListOf<CircleAnnotationOptions>()
+        for (point in points) {
+            val option = CircleAnnotationOptions()
+                .withPoint(point)
+                .withCircleColor(ContextCompat.getColor(requireContext(), color))
+                .withCircleRadius(8.0)
+
+            options.add(option)
+        }
+        circleAnnotationManager?.create(options)
+    }
+
+    private fun drawRoute(points: List<Point>, pallet: Pallet) {
+        val color = colorFor(pallet)
+        val polyLineAnnotationManager = lines[pallet]
+        if (points.isEmpty()) {
+            polyLineAnnotationManager?.deleteAll()
+            return
+        }
+
+        val options = mutableListOf<PolylineAnnotationOptions>()
+        for (point in points) {
+            val option = PolylineAnnotationOptions()
+                .withPoints(points)
+                .withLineColor(ContextCompat.getColor(requireContext(), color))
+                .withLineWidth(5.0)
+            options.add(option)
+        }
+        polyLineAnnotationManager?.create(options)
+    }
+
+    private fun drawFlags(point: Point?, pallet: Pallet) {
+        val pointAnnotationManager = points[pallet]
+        if (point == null) {
+            pointAnnotationManager?.deleteAll()
+            return
+        }
+        val bitmap: Bitmap = BitmapFactory.decodeResource(resources,R.drawable.finish)
+
+        val options = mutableListOf<PointAnnotationOptions>()
+        val option = PointAnnotationOptions()
+            .withPoint(point)
+            .withIconImage(bitmap)
+            .withIconSize(2.0)
+
+        options.add(option)
+
+        pointAnnotationManager?.create(options)
+    }
+
+    private fun colorFor(pallet: Pallet): Int {
+        return when(pallet) {
+            Pallet.RED -> R.color.red
+            Pallet.GREEN -> R.color.green
+            Pallet.BLUE -> R.color.blue
+            Pallet.YELLOW -> R.color.yellow
+            Pallet.PURPLE -> R.color.cyan
+            Pallet.MAGENTA -> R.color.magenta
+        }
+    }
 }

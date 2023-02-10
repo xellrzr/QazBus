@@ -1,6 +1,8 @@
 package com.example.quzbus.data.models.response.getbuses
 
 import com.example.quzbus.domain.models.bus.Bus
+import com.example.quzbus.domain.models.routes.Direction
+import com.example.quzbus.domain.models.routes.Point
 
 data class Lt(
     val An: String, // Номер автомобиля
@@ -16,13 +18,11 @@ data class Lt(
     fun toBus(): Bus {
         return Bus(
             transportNumber = An,
-            direction = Dr,
+            direction = if (Dr == 1) Direction.DIRECTION_A else Direction.DIRECTION_B,
             transportId = Id,
             tp = Tp,
-            longitude1 = X1,
-            longitude2 = X2,
-            latitude1 = Y1,
-            latitude2 = Y2
+            pointA = Point(X1, Y1),
+            pointB = Point(X2, Y2)
         )
     }
 }

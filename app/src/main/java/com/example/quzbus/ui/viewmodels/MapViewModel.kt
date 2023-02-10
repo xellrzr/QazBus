@@ -5,17 +5,21 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.quzbus.R
-import com.example.quzbus.domain.models.AuthFormState
 import com.example.quzbus.data.models.response.Message
-import com.example.quzbus.domain.models.RouteState
+import com.example.quzbus.domain.models.routes.Direction
+import com.example.quzbus.domain.models.routes.Pallet
 import com.example.quzbus.domain.models.routes.Route
 import com.example.quzbus.domain.repository.AuthRepository
 import com.example.quzbus.domain.repository.CitiesRepository
 import com.example.quzbus.domain.repository.RoutesRepository
 import com.example.quzbus.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.*
 import javax.inject.Inject
+import kotlin.concurrent.schedule
 
 @HiltViewModel
 class MapViewModel @Inject constructor(
@@ -23,6 +27,10 @@ class MapViewModel @Inject constructor(
     private val citiesRepository: CitiesRepository,
     private val routesRepository: RoutesRepository,
 ) : ViewModel() {
+
+    private var job: Job? = null
+    private var pallet = Pallet.MAGENTA
+    private val pool = hashMapOf<Pallet, Route>()
 
     //Хранит ответ на запрос получение списка городов
     private val _getCitiesResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
@@ -104,6 +112,28 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    fun selectRoute(route: String): Boolean {
+        val model = _routeState.value?.routes?.get(route)
+        if (model != null) {
+            if (model.selectedDirection != null) {
+                if(model.selectedDirection == Direction.DIRECTION_A) {
+                    model.selectedDirection = Direction.DIRECTION_B
+                } else {
+                    model.selectedDirection = null
+                    model.pallet?.let { drain(it) }
+                }
+            } else {
+                val success = insert(model)
+                if (success) {
+                    model.selectedDirection = Direction.DIRECTION_A
+                } else {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+
     fun getRoute(route: String) {
         viewModelScope.launch {
             val result = routesRepository.getRoute(route)
@@ -112,12 +142,7 @@ class MapViewModel @Inject constructor(
                 is NetworkResult.Success -> {
                     if (routes?.containsKey(route) == true) {
                         routes[route]?.let { routeObj ->
-                            routeObj.routeA = result.data?.La?.map { it.toRouteCoordinates() }.orEmpty()
-                            routeObj.routeB = result.data?.Lb?.map { it.toRouteCoordinates() }.orEmpty()
-                            routeObj.routeStopsA = result.data?.Sa?.map { it.toRouteStops() }.orEmpty()
-                            routeObj.routeStopsB = result.data?.Sb?.map { it.toRouteStops() }.orEmpty()
-                            routeObj.routeStart = result.data?.Na
-                            routeObj.routeFinish = result.data?.Nb
+                            result.data?.let { routeObj.fillFrom(it) }
                         }
                     }
                     _routeState.postValue(
@@ -135,6 +160,47 @@ class MapViewModel @Inject constructor(
                         RouteState(
                             routes = newRoutes,
                             error = "Can't load routes",
+                            isLoading = false
+                        )
+                    )
+                }
+                is NetworkResult.Loading -> {
+                    _routeState.postValue(
+                        RouteState(
+                            isLoading = true
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    private fun getBuses(route: String) {
+        viewModelScope.launch {
+            val result = routesRepository.getBuses(route)
+            val routes = _routeState.value?.routes
+            when(result) {
+                is NetworkResult.Success -> {
+                    if (routes?.containsKey(route) == true) {
+                        routes[route]?.let { routeObj ->
+                            result.data?.let { routeObj.fillBusesFrom(it) }
+                        }
+                    }
+                    _routeState.postValue(
+                        routes?.let {
+                            RouteState(
+                                routes = it,
+                                isLoading = false
+                            )
+                        }
+                    )
+                }
+                is NetworkResult.Error -> {
+                    val newRoutes = hashMapOf<String, Route>()
+                    _routeState.postValue(
+                        RouteState(
+                            routes = newRoutes,
+                            error = "Can't load buses",
                             isLoading = false
                         )
                     )
@@ -174,6 +240,79 @@ class MapViewModel @Inject constructor(
     //Метод для проверки длины введенного SMS - кода
     private fun isSmsCodeValid(smsCode: String): Boolean {
         return smsCode.length == 6
+    }
+
+
+    private fun startTimer() {
+        job = viewModelScope.launch {
+            while(true) {
+                ping()
+                delay(5_000)
+            }
+        }
+    }
+
+    private fun cancelTimer() {
+        job?.cancel()
+    }
+
+    private fun insert(route: Route): Boolean {
+        if (pool.keys.size == Pallet.values().size) return false
+        for (pallet in Pallet.values()){
+            if (!pool.containsKey(pallet)) {
+                route.pallet = pallet
+                pool[pallet] = route
+                break
+            }
+        }
+        if (pool.keys.size == 1) {
+            startTimer()
+        }
+        return true
+    }
+
+    private fun drain(pallet: Pallet) {
+        val route = pool[pallet]
+        route?.reset()
+        pool.remove(pallet)
+        if (pool.isEmpty()) {
+            cancelTimer()
+        }
+        _routeState.postValue(
+            routeState.value?.routes?.let {
+                RouteState(
+                    routes = it
+                )
+            }
+        )
+    }
+
+    private fun ping() {
+        var pingPallet = next(pallet)
+        while (true) {
+            val route = pool[pingPallet]
+            if (route != null) {
+                getRoute(route.name)
+                Timer().schedule(1_000) {
+                    getBuses(route.name)
+                }
+                pallet = pingPallet
+                break
+            } else {
+                pingPallet = next(pingPallet)
+            }
+        }
+    }
+
+    private fun next(palette: Pallet): Pallet {
+        return when (palette) {
+            Pallet.RED -> Pallet.GREEN
+            Pallet.GREEN -> Pallet.BLUE
+            Pallet.BLUE -> Pallet.YELLOW
+            Pallet.YELLOW -> Pallet.PURPLE
+            Pallet.PURPLE -> Pallet.MAGENTA
+            Pallet.MAGENTA -> Pallet.RED
+        }
     }
 
 }

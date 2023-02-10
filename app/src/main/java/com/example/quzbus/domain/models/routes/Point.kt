@@ -1,6 +1,6 @@
 package com.example.quzbus.domain.models.routes
 
-data class RouteCoordinates(
+data class Point(
     val x: Double,
     val y: Double
 )
