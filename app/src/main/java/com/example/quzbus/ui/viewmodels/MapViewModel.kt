@@ -75,6 +75,17 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    //Сброс сохранненого города
+    fun changeCity() {
+        val routes = hashMapOf<String, Route>()
+        citiesRepository.setCityId(0)
+        _routeState.postValue(
+            RouteState(
+                routes = routes
+            )
+        )
+    }
+
     fun getRoutes(cityId: Int) {
         viewModelScope.launch {
             when(val result = routesRepository.getRoutes(cityId)) {
@@ -112,16 +123,20 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    //По нажатию проверяем есть ли переданный маршрут в коллекции
     fun selectRoute(route: String): Boolean {
         val model = _routeState.value?.routes?.get(route)
+        //есть есть и направление А - тогда меняем направление на Б
         if (model != null) {
             if (model.selectedDirection != null) {
                 if(model.selectedDirection == Direction.DIRECTION_A) {
                     model.selectedDirection = Direction.DIRECTION_B
+                    //Если маршрута нет - обнуяем его направление и очищаем паллетку
                 } else {
                     model.selectedDirection = null
                     model.pallet?.let { drain(it) }
                 }
+                //Если направление равно нулю - тогда задаем направление движение на А
             } else {
                 val success = insert(model)
                 if (success) {
@@ -134,6 +149,7 @@ class MapViewModel @Inject constructor(
         return true
     }
 
+    //Получение маршрута для выбранного автобуса
     fun getRoute(route: String) {
         viewModelScope.launch {
             val result = routesRepository.getRoute(route)
@@ -175,6 +191,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    //Получение списка автобусов для выбранного маршрута
     private fun getBuses(route: String) {
         viewModelScope.launch {
             val result = routesRepository.getBuses(route)
@@ -243,6 +260,7 @@ class MapViewModel @Inject constructor(
     }
 
 
+    //Запуск таймера
     private fun startTimer() {
         job = viewModelScope.launch {
             while(true) {
@@ -252,10 +270,12 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    //Отмена таймера
     private fun cancelTimer() {
         job?.cancel()
     }
 
+    //Вставляем маршрут в паллетку
     private fun insert(route: Route): Boolean {
         if (pool.keys.size == Pallet.values().size) return false
         for (pallet in Pallet.values()){
@@ -271,13 +291,18 @@ class MapViewModel @Inject constructor(
         return true
     }
 
+    //Получаем маршрут по цвету паллетки
     private fun drain(pallet: Pallet) {
         val route = pool[pallet]
+        //Сбрасываем маршрут на 0
         route?.reset()
+        //Удаляем из паллетки цвет
         pool.remove(pallet)
+        //Если паллетка пустая - отменяем таймер
         if (pool.isEmpty()) {
             cancelTimer()
         }
+        //Задать новое значение для маршрутов
         _routeState.postValue(
             routeState.value?.routes?.let {
                 RouteState(
@@ -287,6 +312,7 @@ class MapViewModel @Inject constructor(
         )
     }
 
+    //Пинг маршрутов
     private fun ping() {
         var pingPallet = next(pallet)
         while (true) {
@@ -304,6 +330,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
+    //Присваивание цвета паллетки
     private fun next(palette: Pallet): Pallet {
         return when (palette) {
             Pallet.RED -> Pallet.GREEN

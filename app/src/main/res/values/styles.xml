@@ -4,7 +4,7 @@
     <style name="Widget.Material3.BottomSheet" parent="Widget.MaterialComponents.BottomSheet">
         <!-- Add any necessary styles for the bottom sheet here -->
         <item name="behavior_hideable">false</item>
-        <item name="behavior_peekHeight">30dp</item>
+        <item name="behavior_peekHeight">50dp</item>
     </style>
 
 </resources>

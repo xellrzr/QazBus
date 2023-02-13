@@ -7,3 +7,7 @@ data class RouteState(
     val error: String? = null,
     val isLoading: Boolean = true
 )
+
+ enum class eventType {
+
+ }

@@ -33,6 +33,7 @@ data class Route(
         busPoints = response.Lt.map { it.toBus() }
     }
 
+    //Сбрасываем значение маршрута
     fun reset() {
         routeA = emptyList()
         routeB = emptyList()

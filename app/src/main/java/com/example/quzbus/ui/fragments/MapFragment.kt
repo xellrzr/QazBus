@@ -51,7 +51,6 @@ class MapFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-
         return inflater.inflate(R.layout.fragment_map, container, false)
     }
 
@@ -62,6 +61,7 @@ class MapFragment : Fragment() {
         mapView.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS)
 
         val annotationApi = mapView.annotations
+
 
         for (pallet in Pallet.values()) {
             lines[pallet] = annotationApi.createPolylineAnnotationManager()
@@ -87,6 +87,11 @@ class MapFragment : Fragment() {
         observeRoutes()
     }
 
+    private var lines = HashMap<Pallet, PolylineAnnotationManager>()
+    private var circles = HashMap<Pallet, CircleAnnotationManager>()
+    private var points = HashMap<Pallet, PointAnnotationManager>()
+
+    //Выбор маршрута, в случае заполненности паллетки на 6 марошрутов - сообщение.
     private fun selectRoute() {
         selectBusAdapter.setOnItemClickListener {
             val success = viewModel.selectRoute(it.name)
@@ -99,10 +104,12 @@ class MapFragment : Fragment() {
         }
     }
 
+    //Показывать ли поле для авторизации
     private fun isShowAuthField() {
         binding.authField.root.visibility = if (viewModel.isUserLoggedIn()) View.GONE else View.VISIBLE
     }
 
+    //Добавление маски номера телефона в форму для авторизации
     private fun addPhoneNumberMask() {
         val editText = binding.authField.etPhoneNumberEdit
         val listener = MaskedTextChangedListener("+ [0] ([000]) [000]-[00]-[00]", editText)
@@ -111,12 +118,14 @@ class MapFragment : Fragment() {
         editText.onFocusChangeListener = listener
     }
 
+    //Настройка слушателей
     private fun setupListeners() {
         getSmsCode()
         selectRegion()
         selectRoute()
     }
 
+    //Настройка ресайклера для выбора города
     private fun setupRecyclerViewSelectCity() {
         binding.selectCity.rvSelectCities.apply {
             adapter = selectCityAdapter
@@ -124,6 +133,7 @@ class MapFragment : Fragment() {
         }
     }
 
+    //Настройка ресайклера для выбора автобуса
     private fun setupRecyclerViewSelectBus() {
         binding.selectBus.rvSelectBus.apply {
             adapter = selectBusAdapter
@@ -131,12 +141,14 @@ class MapFragment : Fragment() {
         }
     }
 
+    //Получение списка городов при запуске фрагмента
     private fun getCities() {
         lifecycleScope.launchWhenStarted {
             viewModel.getCities()
         }
     }
 
+    //Получение СМС-кода
     private fun getSmsCode() {
         binding.authField.btnSend.setOnClickListener {
             val phoneNumber = binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), "")
@@ -145,6 +157,7 @@ class MapFragment : Fragment() {
         }
     }
 
+    //Получение списка маршрутов, изменение видимости ресайклеров
     private fun selectRegion() {
         selectCityAdapter.setOnItemClickListener {
             viewModel.getRoutes(it.rid)
@@ -153,6 +166,7 @@ class MapFragment : Fragment() {
         }
     }
 
+    //При введении последней цифра СМС-кода - авторизация
     private fun setSmsCode() {
         binding.authField.etSmsCodeEdit.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -168,11 +182,13 @@ class MapFragment : Fragment() {
         })
     }
 
+    //Авторизация пользователя
     private fun getAuth(phoneNumber: String, smsCode: String) {
         viewModel.getAuth(phoneNumber, smsCode)
         observeAuth()
     }
 
+    //Проверка на смену номера телефона
     private fun checkPhoneNumberCodeDataChanged() {
         binding.authField.etSmsCodeEdit.apply {
             afterTextChanged {
@@ -195,6 +211,7 @@ class MapFragment : Fragment() {
         }
     }
 
+    //Результат запроса городов
     private fun observeCities() {
         viewModel.getCitiesResponse.observe(viewLifecycleOwner) { result ->
             when (result) {
@@ -215,6 +232,7 @@ class MapFragment : Fragment() {
         }
     }
 
+    //Результат авторизации
     private fun observeAuth() {
         viewModel.getAuthResponse.observe(viewLifecycleOwner) { result ->
             when(result) {
@@ -234,6 +252,7 @@ class MapFragment : Fragment() {
         }
     }
 
+    //Результат получения маршрутов для выбранного города
     private fun observeRoutes() {
         viewModel.routeState.observe(viewLifecycleOwner) { result ->
             val data = result.routes
@@ -246,11 +265,15 @@ class MapFragment : Fragment() {
             for (route in data) {
                 val busRoute = route.value
                 if(busRoute.selectedDirection != null) {
-                    val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
+                    //Координаты для отрисовки маршрута
                     val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
+                    //Список автобусов в зависимости от выбранного направления движения
+                    val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
+                    //Координаты для отрисовки конечной точки маршрута
+                    val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
+
                     val points = routePoints.map { Point.fromLngLat(it.x, it.y) }
                     val busPoints = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
-                    val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
                     val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
                     busRoute.pallet?.let {
                         drawBuses(busPoints, it)
@@ -268,10 +291,7 @@ class MapFragment : Fragment() {
         }
     }
 
-    private var lines = HashMap<Pallet, PolylineAnnotationManager>()
-    private var circles = HashMap<Pallet, CircleAnnotationManager>()
-    private var points = HashMap<Pallet, PointAnnotationManager>()
-
+    //Отрисовка автобусов
     private fun drawBuses(points: List<Point>, pallet: Pallet) {
         val color = colorFor(pallet)
         val circleAnnotationManager = circles[pallet]
@@ -289,13 +309,11 @@ class MapFragment : Fragment() {
         circleAnnotationManager?.create(options)
     }
 
+    //Отрисовка маршрута
     private fun drawRoute(points: List<Point>, pallet: Pallet) {
         val color = colorFor(pallet)
         val polyLineAnnotationManager = lines[pallet]
-        if (points.isEmpty()) {
-            polyLineAnnotationManager?.deleteAll()
-            return
-        }
+        polyLineAnnotationManager?.deleteAll()
 
         val options = mutableListOf<PolylineAnnotationOptions>()
         for (point in points) {
@@ -308,12 +326,14 @@ class MapFragment : Fragment() {
         polyLineAnnotationManager?.create(options)
     }
 
+    //Отрисовка конечной точки маршрута
     private fun drawFlags(point: Point?, pallet: Pallet) {
         val pointAnnotationManager = points[pallet]
+        pointAnnotationManager?.deleteAll()
         if (point == null) {
-            pointAnnotationManager?.deleteAll()
             return
         }
+
         val bitmap: Bitmap = BitmapFactory.decodeResource(resources,R.drawable.finish)
 
         val options = mutableListOf<PointAnnotationOptions>()
@@ -327,6 +347,7 @@ class MapFragment : Fragment() {
         pointAnnotationManager?.create(options)
     }
 
+    //Выбор цвета маршрута
     private fun colorFor(pallet: Pallet): Int {
         return when(pallet) {
             Pallet.RED -> R.color.red
