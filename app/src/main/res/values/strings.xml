@@ -1,21 +1,33 @@
 <resources>
-    <string name="app_name">QuzBus</string>
+    <string name="app_name">QazBus</string>
 
     <!-- Phone & SMS code Errors -->
     <string name="incorrect_phone_number">Неверный номер</string>
     <string name="incorrect_sms_code">Введите код</string>
 
-    <!-- Buses -->
-    <string name="bus1">1</string>
-    <string name="bus2">2</string>
-    <string name="bus3">23</string>
-    <string name="bus4">4A</string>
-    <string name="bus5">12</string>
-    <string name="bus6">43</string>
-    <string name="bus7">11</string>
-    <string name="bus8">54</string>
-    <string name="bus9">4C</string>
-    <string name="bus10">62</string>
-    <string name="bus11">52</string>
-    <string name="bus12">12</string>
+    <string name="fab_desc">Меню настроек</string>
+    <string name="menu_option_01">Сменить город</string>
+    <string name="menu_option_02">Сменить номер</string>
+
+    <string name="select_route">Выберите маршрут</string>
+    <string name="select_route_error">Авторизуйтесь, чтобы выбрать город</string>
+
+    <!-- Смена города -->
+    <string name="menu_city_title">Смена города</string>
+    <string name="menu_city_message">Вы уверены что хотите сменить город?</string>
+    <string name="menu_city_positive">Да</string>
+    <string name="menu_city_negative">Нет</string>
+
+    <!-- Смена телефона -->
+    <string name="menu_phone_title">Смена телефона</string>
+    <string name="menu_phone_message">Вы уверены что хотите сменить номер телефона?</string>
+    <string name="menu_phone_positive">Да</string>
+    <string name="menu_phone_negative">Нет</string>
+
+    <!-- Ошибка СМС -->
+    <string name="menu_sms_title">Ошибка</string>
+    <string name="menu_sms_message">Вы уже авторизованы, отправьте слово PAS на короткий номер 2505</string>
+    <string name="menu_sms_positive">Отправить</string>
+    <string name="menu_sms_negative">Нет</string>
+
 </resources>

@@ -1,17 +1,17 @@
 package com.example.quzbus.ui.viewmodels
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.quzbus.R
 import com.example.quzbus.data.models.response.Message
+import com.example.quzbus.data.models.response.Region
 import com.example.quzbus.domain.models.routes.Direction
 import com.example.quzbus.domain.models.routes.Pallet
 import com.example.quzbus.domain.models.routes.Route
-import com.example.quzbus.domain.repository.AuthRepository
-import com.example.quzbus.domain.repository.CitiesRepository
-import com.example.quzbus.domain.repository.RoutesRepository
+import com.example.quzbus.domain.repository.*
 import com.example.quzbus.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -19,6 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
 import javax.inject.Inject
+import kotlin.collections.HashMap
 import kotlin.concurrent.schedule
 
 @HiltViewModel
@@ -26,38 +27,31 @@ class MapViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val citiesRepository: CitiesRepository,
     private val routesRepository: RoutesRepository,
+    private val resetUserDataRepository: ResetUserDataRepository,
+    private val favoriteRouteRepository: FavoriteRouteRepository
 ) : ViewModel() {
 
     private var job: Job? = null
     private var pallet = Pallet.MAGENTA
     private val pool = hashMapOf<Pallet, Route>()
-
-    //Хранит ответ на запрос получение списка городов
-    private val _getCitiesResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
-    val getCitiesResponse: LiveData<NetworkResult<Message>> = _getCitiesResponse
+    private var routes = HashMap<String, Route>()
 
     //Хранит ответ на запрос получение SMS - кода
     private val _getSmsCodeResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
+    val getSmsCodeResponse: LiveData<NetworkResult<Message>> = _getSmsCodeResponse
 
     //Хранит ответ на запрос получение авторизации
     private val _getAuthResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
-    val getAuthResponse: LiveData<NetworkResult<Message>> = _getAuthResponse
 
     //Хранит стейт и проверку на заполненность данных номер телефона и SMS код
     private val _authFormState: MutableLiveData<AuthFormState> = MutableLiveData()
 
     //Хранит стейт со всеми маршрутами доступными для города
-    //ХэшМап ключ - номер маршрута, значение - маршрут для этого номера
     private val _routeState: MutableLiveData<RouteState> = MutableLiveData()
     val routeState: LiveData<RouteState> = _routeState
 
-    //Метод для получения списка городов
-    fun getCities() {
-        viewModelScope.launch {
-            _getCitiesResponse.postValue(NetworkResult.Loading())
-            _getCitiesResponse.postValue(citiesRepository.getCities())
-        }
-    }
+    private val _sheetState: MutableLiveData<SheetState> = MutableLiveData()
+    val sheetState: LiveData<SheetState> = _sheetState
 
     //Метод для получения SMS - кода
     fun getSmsCode(phoneNumber: String) {
@@ -75,169 +69,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    //Сброс сохранненого города
-    fun changeCity() {
-        val routes = hashMapOf<String, Route>()
-        citiesRepository.setCityId(0)
-        _routeState.postValue(
-            RouteState(
-                routes = routes
-            )
-        )
-    }
-
-    fun getRoutes(cityId: Int) {
-        viewModelScope.launch {
-            when(val result = routesRepository.getRoutes(cityId)) {
-                is NetworkResult.Success -> {
-                    val routes = hashMapOf<String, Route>()
-                    val dataRoutes = result.data?.routes ?: emptyList()
-                    for (route in dataRoutes) {
-                        routes[route.name] = route
-                    }
-                    _routeState.postValue(
-                        RouteState(
-                            routes = routes,
-                            isLoading = false
-                        )
-                    )
-                }
-                is NetworkResult.Error -> {
-                    val routes = hashMapOf<String, Route>()
-                    _routeState.postValue(
-                        RouteState(
-                            routes = routes,
-                            error = "Can't load routes",
-                            isLoading = false
-                        )
-                    )
-                }
-                is NetworkResult.Loading -> {
-                    _routeState.postValue(
-                        RouteState(
-                            isLoading = true
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    //По нажатию проверяем есть ли переданный маршрут в коллекции
-    fun selectRoute(route: String): Boolean {
-        val model = _routeState.value?.routes?.get(route)
-        //есть есть и направление А - тогда меняем направление на Б
-        if (model != null) {
-            if (model.selectedDirection != null) {
-                if(model.selectedDirection == Direction.DIRECTION_A) {
-                    model.selectedDirection = Direction.DIRECTION_B
-                    //Если маршрута нет - обнуяем его направление и очищаем паллетку
-                } else {
-                    model.selectedDirection = null
-                    model.pallet?.let { drain(it) }
-                }
-                //Если направление равно нулю - тогда задаем направление движение на А
-            } else {
-                val success = insert(model)
-                if (success) {
-                    model.selectedDirection = Direction.DIRECTION_A
-                } else {
-                    return false
-                }
-            }
-        }
-        return true
-    }
-
-    //Получение маршрута для выбранного автобуса
-    fun getRoute(route: String) {
-        viewModelScope.launch {
-            val result = routesRepository.getRoute(route)
-            val routes = _routeState.value?.routes
-            when(result) {
-                is NetworkResult.Success -> {
-                    if (routes?.containsKey(route) == true) {
-                        routes[route]?.let { routeObj ->
-                            result.data?.let { routeObj.fillFrom(it) }
-                        }
-                    }
-                    _routeState.postValue(
-                        routes?.let {
-                            RouteState(
-                                routes = it,
-                                isLoading = false
-                            )
-                        }
-                    )
-                }
-                is NetworkResult.Error -> {
-                    val newRoutes = hashMapOf<String, Route>()
-                    _routeState.postValue(
-                        RouteState(
-                            routes = newRoutes,
-                            error = "Can't load routes",
-                            isLoading = false
-                        )
-                    )
-                }
-                is NetworkResult.Loading -> {
-                    _routeState.postValue(
-                        RouteState(
-                            isLoading = true
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    //Получение списка автобусов для выбранного маршрута
-    private fun getBuses(route: String) {
-        viewModelScope.launch {
-            val result = routesRepository.getBuses(route)
-            val routes = _routeState.value?.routes
-            when(result) {
-                is NetworkResult.Success -> {
-                    if (routes?.containsKey(route) == true) {
-                        routes[route]?.let { routeObj ->
-                            result.data?.let { routeObj.fillBusesFrom(it) }
-                        }
-                    }
-                    _routeState.postValue(
-                        routes?.let {
-                            RouteState(
-                                routes = it,
-                                isLoading = false
-                            )
-                        }
-                    )
-                }
-                is NetworkResult.Error -> {
-                    val newRoutes = hashMapOf<String, Route>()
-                    _routeState.postValue(
-                        RouteState(
-                            routes = newRoutes,
-                            error = "Can't load buses",
-                            isLoading = false
-                        )
-                    )
-                }
-                is NetworkResult.Loading -> {
-                    _routeState.postValue(
-                        RouteState(
-                            isLoading = true
-                        )
-                    )
-                }
-            }
-        }
-    }
-
-    //Метод для проверки авторизован ли пользователь
-    fun isUserLoggedIn(): Boolean {
-        return authRepository.isUserLoggedIn()
-    }
-
     //Метод для проверки изменения данных в полях авторизации
     fun authDataChanged(phoneNumber: String, smsCode: String) {
         if (!isPhoneNumberValid(phoneNumber)) {
@@ -246,6 +77,270 @@ class MapViewModel @Inject constructor(
             _authFormState.value = AuthFormState(smsCodeError = R.string.incorrect_sms_code)
         } else {
             _authFormState.value = AuthFormState(isDataValid = true)
+        }
+    }
+
+    fun setup() {
+        val isCitySelected = citiesRepository.isCitySelected()
+        val isUserLoggedIn = authRepository.isUserLoggedIn()
+        refreshSheetState(
+            isCitySelected = isCitySelected,
+            isAuthorized = isUserLoggedIn
+        )
+        if (isCitySelected && isUserLoggedIn) getRoutes() else getCities()
+    }
+
+    fun selectCity(cityName: String, cityId: Int) {
+        citiesRepository.setSelectCity(cityName)
+        citiesRepository.setCityId(cityId)
+        refreshSheetState()
+        if (authRepository.isUserLoggedIn()) getRoutes()
+    }
+
+    //Получение маршрута для выбранного автобуса
+    fun getRoute(route: String) {
+        viewModelScope.launch {
+            when(val result = routesRepository.getRoute(route)) {
+                is NetworkResult.Success -> {
+                    routes[route]?.let { routeObj ->
+                        //проверка - есть ли данные о маршруте движения
+                        val isEmpty = routeObj.routeA.isEmpty()
+                        //заполняем маршрут
+                        result.data?.let { routeObj.fillFrom(it) }
+                        if (isEmpty) {
+                            refreshRouteState(
+                                route = routeObj,
+                                pallet = routeObj.pallet,
+                                event = Event.ROUTE
+                            )
+                        }
+                    }
+                }
+                is NetworkResult.Error -> {
+                    refreshSheetState(error = "Ошибка получения маршрута")
+                }
+                is NetworkResult.Loading -> {
+                    TODO()
+                }
+            }
+        }
+    }
+
+    //По нажатию проверяем есть ли переданный маршрут в коллекции
+    fun selectRoute(route: String): Boolean {
+        val model = routes[route]
+
+        if (model != null) {
+            if (model.selectedDirection != null) {
+                if(model.selectedDirection == Direction.DIRECTION_A) {
+                    model.selectedDirection = Direction.DIRECTION_B
+                    refreshRouteState(
+                        route = model,
+                        pallet = model.pallet,
+                        event = Event.REDRAW
+                    )
+                    //Если маршрута нет - обнуяем его направление и очищаем паллетку
+                } else {
+                    model.selectedDirection = null
+                    model.isSelected = false
+                    model.pallet?.let { drain(it) }
+                }
+                //Если направление равно нулю - тогда задаем направление движение на А
+            } else {
+                val success = insert(model)
+                if (success) {
+                    model.selectedDirection = Direction.DIRECTION_A
+                    model.isSelected = true
+                } else {
+                    return false
+                }
+            }
+        }
+        updateRoutesList()
+        return true
+    }
+
+    fun favoriteRoute(route: String) {
+        val model = routes[route]
+        val name = model?.name ?: ""
+        val cityId = citiesRepository.getCityId()
+        model?.isFavorite = if (model != null) !model.isFavorite else false
+        val isFavorite = model?.isFavorite ?: false
+        favoriteRouteRepository.setFavoriteRoute(name, cityId, isFavorite)
+        updateRoutesList()
+    }
+
+    fun resetCity() {
+        refreshSheetState(
+            isCitySelected = false
+        )
+        resetPool()
+        citiesRepository.setCityId(0)
+        citiesRepository.setSelectCity(null)
+        Log.d("TAG", "$pool")
+        Log.d("TAG", "${routeState.value}")
+
+        getCities()
+    }
+
+    fun resetPhone() {
+        resetUserDataRepository.setPhoneNumber(null)
+        resetUserDataRepository.setAccessToken(null)
+        refreshSheetState(
+            isAuthorized = false,
+            cities = _sheetState.value?.cities ?: emptyList(),
+            routes = emptyList()
+        )
+        resetPool()
+    }
+
+    private fun getRoutes() {
+        viewModelScope.launch {
+            var error: String? = null
+            when(val result = routesRepository.getRoutes()) {
+                is NetworkResult.Success -> {
+                    val dataRoutes = result.data?.routes ?: emptyList()
+                    for (route in dataRoutes) {
+                        //проверяем по каждому маршруту, находится ли он в избранном
+                        route.isFavorite = favoriteRouteRepository.getFavoriteRoute(
+                            route.name, citiesRepository.getCityId())
+                        //заполняем мапу маршрутами
+                        routes[route.name] = route
+                    }
+                }
+                is NetworkResult.Error -> {
+                    error = "Ошибка получения маршрутов"
+                    routes = hashMapOf()
+                }
+                is NetworkResult.Loading -> {
+                    TODO()
+                }
+            }
+            if (error != null) {
+                refreshSheetState(error = error)
+            } else {
+                updateRoutesList()
+            }
+        }
+    }
+
+    //Метод для получения списка городов
+    private fun getCities() {
+        viewModelScope.launch {
+            var cities = emptyList<Region>()
+            var error: String? = null
+            when(val result = citiesRepository.getCities()) {
+                is NetworkResult.Loading -> {
+                    TODO()
+                }
+                is NetworkResult.Success -> {
+                    val regions = result.data?.regions
+                    if (regions != null) {
+                        cities = regions
+                    } else {
+                        error = "Список городой пустой"
+                    }
+                }
+                is NetworkResult.Error -> {
+                    error = "Ошибка получения списка городов"
+                }
+            }
+            refreshSheetState(cities = cities, error = error)
+        }
+    }
+
+//    private fun resetPool() {
+//        try {
+//            for (i in pool.keys) {
+//                refreshRouteState(
+//                    route = pool[i],
+//                    pallet = pallet,
+//                    event = Event.CLEAR
+//                )
+//                pool[i]?.reset()
+//                pool.remove(i)
+//            }
+//        } catch (e:Exception) {
+//            Log.d("TAG", "${e.message}")
+//        }
+//        if (pool.isEmpty()) {
+//            cancelTimer()
+//        }
+//    }
+
+    private fun resetPool() {
+        cancelTimer()
+        for (i in pool.values) {
+            if (pool.isNotEmpty()) pool.values.remove(i)
+        }
+        refreshRouteState(
+            route = Route("0", "0"),
+            pallet = pallet,
+            event = Event.CLEAR
+        )
+    }
+
+    private fun refreshSheetState(
+        isAuthorized: Boolean = authRepository.isUserLoggedIn(),
+        isCitySelected: Boolean = citiesRepository.isCitySelected(),
+        cities: List<Region> = emptyList(),
+        routes: List<Route> = emptyList(),
+        error: String? = null
+    ) {
+        _sheetState.postValue(
+            SheetState(
+                isAuthorized = isAuthorized,
+                isCitySelected = isCitySelected,
+                cities = cities,
+                routes = routes,
+                error = error
+            )
+        )
+    }
+
+    private fun refreshRouteState(
+        route: Route? = null,
+        pallet: Pallet? = null,
+        event: Event,
+    ) {
+        _routeState.postValue(
+            RouteState(
+                route = route,
+                pallet = pallet,
+                event = event
+            )
+        )
+    }
+
+    //Сортировка маршрутов
+    private fun updateRoutesList() {
+        val routes = routes.values.map { it }
+        val sortedList = routes.sortedWith(
+            compareBy({ !it.isSelected }, { !it.isFavorite } ,{ it.name.toIntOrNull() }))
+        refreshSheetState(routes = sortedList)
+    }
+
+    //Получение списка автобусов для выбранного маршрута
+    private fun getBuses(route: String) {
+        viewModelScope.launch {
+            when(val result = routesRepository.getBuses(route)) {
+                is NetworkResult.Success -> {
+                    routes[route]?.let { routeObj ->
+                        result.data?.let { routeObj.fillBusesFrom(it) }
+                        refreshRouteState(
+                            route = routeObj,
+                            pallet = routeObj.pallet,
+                            event = Event.BUS
+                        )
+                    }
+                }
+                is NetworkResult.Error -> {
+                    refreshSheetState(error = "Ошибка получения списка автобусов")
+                }
+                is NetworkResult.Loading -> {
+                    TODO()
+                }
+            }
         }
     }
 
@@ -277,10 +372,14 @@ class MapViewModel @Inject constructor(
 
     //Вставляем маршрут в паллетку
     private fun insert(route: Route): Boolean {
+        //Если размер равен 6, прервать
         if (pool.keys.size == Pallet.values().size) return false
         for (pallet in Pallet.values()){
+            //если пул не содержит цвет
             if (!pool.containsKey(pallet)) {
+                //присвоить цвет для маршрута
                 route.pallet = pallet
+                //в пуле цветов - присвоить маршрут
                 pool[pallet] = route
                 break
             }
@@ -303,12 +402,10 @@ class MapViewModel @Inject constructor(
             cancelTimer()
         }
         //Задать новое значение для маршрутов
-        _routeState.postValue(
-            routeState.value?.routes?.let {
-                RouteState(
-                    routes = it
-                )
-            }
+        refreshRouteState(
+            route = route,
+            pallet = pallet,
+            event = Event.CLEAR
         )
     }
 

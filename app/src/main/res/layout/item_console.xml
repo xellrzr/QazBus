@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/tv_bus_direction_from"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:text="улица Мира"/>
+
+    <ImageView
+        android:id="@+id/iv_console_direction"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:src="@drawable/arrow_forward"/>
+
+    <TextView
+        android:id="@+id/tv_bus_direction_to"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        tools:text="улица. Интеранициональная"/>
+
+</LinearLayout>

@@ -7,7 +7,11 @@ interface CitiesRepository{
 
     suspend fun getCities(): NetworkResult<Message>
 
-    fun setSelectCity(city: String)
+    fun setSelectCity(city: String?)
 
     fun setCityId(cityId: Int)
+
+    fun isCitySelected(): Boolean
+
+    fun getCityId(): Int
 }

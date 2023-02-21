@@ -15,6 +15,7 @@
         android:background="@drawable/rounded_tv_shape"/>
 
     <TextView
+        android:id="@+id/tv_select_bus_route_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Выберите маршрут:"

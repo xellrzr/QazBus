@@ -1,17 +1,21 @@
 package com.example.quzbus.ui.fragments
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.util.Log
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.viewbinding.library.fragment.viewBinding
 import android.widget.Toast
+import androidx.annotation.MenuRes
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -23,14 +27,18 @@ import com.example.quzbus.databinding.FragmentMapBinding
 import com.example.quzbus.domain.models.routes.Direction
 import com.example.quzbus.domain.models.routes.Pallet
 import com.example.quzbus.domain.models.routes.Route
+import com.example.quzbus.ui.adapters.ConsoleAdapter
 import com.example.quzbus.ui.adapters.SelectBusAdapter
 import com.example.quzbus.ui.adapters.SelectCityAdapter
+import com.example.quzbus.ui.viewmodels.Event
 import com.example.quzbus.ui.viewmodels.MapViewModel
 import com.example.quzbus.utils.NetworkResult
 import com.example.quzbus.utils.afterTextChanged
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
+import com.mapbox.maps.plugin.annotation.AnnotationPlugin
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.*
 import com.redmadrobot.inputmask.MaskedTextChangedListener
@@ -40,10 +48,12 @@ import dagger.hilt.android.AndroidEntryPoint
 class MapFragment : Fragment() {
 
     private lateinit var mapView: MapView
+    private lateinit var annotationApi: AnnotationPlugin
 
     private val binding: FragmentMapBinding by viewBinding()
-    private val selectCityAdapter by lazy { SelectCityAdapter(requireContext()) }
+    private val selectCityAdapter by lazy { SelectCityAdapter() }
     private val selectBusAdapter by lazy { SelectBusAdapter() }
+    private val consoleAdapter by lazy { ConsoleAdapter() }
     private val viewModel: MapViewModel by viewModels()
 
     override fun onCreateView(
@@ -59,10 +69,23 @@ class MapFragment : Fragment() {
 
         mapView = binding.mapView
         mapView.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS)
+        annotationApi = mapView.annotations
 
-        val annotationApi = mapView.annotations
+        observeSms()
+        observeSmsCode()
+        observeSheetState()
+        observeRouteState()
+        setupAnnotationManager(annotationApi)
+        addPhoneNumberMask()
+        setupListeners()
+        setupRecyclerViewSelectBus()
+        setupRecyclerViewSelectCity()
+        setupRecyclerViewConsole()
+        checkPhoneNumberCodeDataChanged()
+        setupViewModel()
+    }
 
-
+    private fun setupAnnotationManager(annotationApi: AnnotationPlugin) {
         for (pallet in Pallet.values()) {
             lines[pallet] = annotationApi.createPolylineAnnotationManager()
         }
@@ -74,25 +97,108 @@ class MapFragment : Fragment() {
         for (pallet in Pallet.values()) {
             points[pallet] = annotationApi.createPointAnnotationManager()
         }
+    }
 
-        isShowAuthField()
-        addPhoneNumberMask()
-        setupListeners()
-        setupRecyclerViewSelectBus()
-        setupRecyclerViewSelectCity()
-        getCities()
-        observeCities()
-        checkPhoneNumberCodeDataChanged()
-        setSmsCode()
-        observeRoutes()
+    private fun setupViewModel() {
+        lifecycleScope.launchWhenStarted {
+            viewModel.setup()
+        }
+    }
+
+    private fun observeSms() {
+        viewModel.getSmsCodeResponse.observe(viewLifecycleOwner) {
+            when(it) {
+                is NetworkResult.Success -> {
+                    if (it.data?.result != "1") {
+                        showSmsErrorReceive()
+                    }
+                }
+                else -> {
+
+                }
+            }
+        }
+    }
+
+    private fun sendSms() {
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("smsto:")
+            putExtra("address", "2505")
+            putExtra("sms_body", "PAS")
+        }
+        startActivity(intent)
+    }
+
+    private fun observeSheetState() {
+        viewModel.sheetState.observe(viewLifecycleOwner) {
+            binding.authField.root.visibility = if (it.isAuthorized) View.GONE else View.VISIBLE
+            binding.selectCity.root.visibility = if (it.isCitySelected) View.GONE else View.VISIBLE
+            binding.selectBus.root.visibility = if (!it.isCitySelected) View.GONE else View.VISIBLE
+            if (it.isCitySelected) {
+                if (it.isAuthorized) {
+                    selectBusAdapter.setNewData(it.routes)
+                    binding.selectBus.tvSelectBusRouteTitle.text = getString(R.string.select_route)
+                } else {
+                    binding.selectBus.tvSelectBusRouteTitle.text = getString(R.string.select_route_error)
+                }
+            } else {
+                selectCityAdapter.setNewData(it.cities)
+            }
+            if (it.error != null) {
+                Toast.makeText(requireContext(), it.error, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun observeRouteState() {
+        viewModel.routeState.observe(viewLifecycleOwner) { result ->
+            val busRoute = result.route ?: return@observe
+            val busPallet = result.pallet ?: return@observe
+            val selectedRoutes = mutableListOf<Route>()
+            if (busRoute.isSelected) selectedRoutes.add(busRoute)
+            consoleAdapter.setNewData(selectedRoutes)
+
+            when(result.event) {
+                Event.CLEAR -> {
+                    drawBuses(emptyList(), busPallet)
+                    drawRoute(emptyList(), busPallet)
+                    drawFlags(null, busPallet)
+                }
+                Event.BUS -> {
+                    val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
+                    val busPoints = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
+                    drawBuses(busPoints, busPallet)
+                }
+                Event.ROUTE -> {
+                    val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
+                    val points = routePoints.map { Point.fromLngLat(it.x, it.y) }
+                    val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
+                    val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
+                    drawRoute(points, busPallet)
+                    drawFlags(flagPoint, busPallet)
+                }
+                Event.REDRAW -> {
+                    val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
+                    val points = routePoints.map { Point.fromLngLat(it.x, it.y) }
+                    val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
+                    val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
+                    drawRoute(points, busPallet)
+                    drawFlags(flagPoint, busPallet)
+                    val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
+                    val busPoints = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
+                    drawBuses(busPoints, busPallet)
+                }
+            }
+        }
     }
 
     private var lines = HashMap<Pallet, PolylineAnnotationManager>()
     private var circles = HashMap<Pallet, CircleAnnotationManager>()
     private var points = HashMap<Pallet, PointAnnotationManager>()
 
-    //Выбор маршрута, в случае заполненности паллетки на 6 марошрутов - сообщение.
-    private fun selectRoute() {
+
+    //Выбор маршрута, в случае заполненности паллетки на 6 маршрутов - сообщение.
+    private fun observeSelectedRoute() {
         selectBusAdapter.setOnItemClickListener {
             val success = viewModel.selectRoute(it.name)
             if (!success) {
@@ -104,10 +210,12 @@ class MapFragment : Fragment() {
         }
     }
 
-    //Показывать ли поле для авторизации
-    private fun isShowAuthField() {
-        binding.authField.root.visibility = if (viewModel.isUserLoggedIn()) View.GONE else View.VISIBLE
+    private fun observeFavoriteRoute() {
+        selectBusAdapter.setOnLongClickListener {
+            viewModel.favoriteRoute(it.name)
+        }
     }
+
 
     //Добавление маски номера телефона в форму для авторизации
     private fun addPhoneNumberMask() {
@@ -120,9 +228,11 @@ class MapFragment : Fragment() {
 
     //Настройка слушателей
     private fun setupListeners() {
-        getSmsCode()
-        selectRegion()
-        selectRoute()
+        listenSmsCode()
+        listenSelectedRegion()
+        observeSelectedRoute()
+        showSettings()
+        observeFavoriteRoute()
     }
 
     //Настройка ресайклера для выбора города
@@ -141,37 +251,103 @@ class MapFragment : Fragment() {
         }
     }
 
-    //Получение списка городов при запуске фрагмента
-    private fun getCities() {
-        lifecycleScope.launchWhenStarted {
-            viewModel.getCities()
+    private fun setupRecyclerViewConsole() {
+        binding.rvBusConsole.apply {
+            adapter = consoleAdapter
+            layoutManager = LinearLayoutManager(requireContext())
         }
     }
 
     //Получение СМС-кода
-    private fun getSmsCode() {
+    private fun listenSmsCode() {
         binding.authField.btnSend.setOnClickListener {
             val phoneNumber = binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), "")
             viewModel.getSmsCode(phoneNumber)
-            Log.d("TAG", phoneNumber)
         }
     }
 
     //Получение списка маршрутов, изменение видимости ресайклеров
-    private fun selectRegion() {
+    private fun listenSelectedRegion() {
         selectCityAdapter.setOnItemClickListener {
-            viewModel.getRoutes(it.rid)
-            binding.selectCity.root.visibility = View.GONE
-            binding.selectBus.root.visibility = View.VISIBLE
+            viewModel.selectCity(it.city, it.rid)
         }
     }
 
+    private fun showSettings() {
+        binding.fabSettings.setOnClickListener { view: View ->
+            showMenu(view, R.menu.menu_settings)
+        }
+    }
+
+    private fun showMenu(view: View, @MenuRes menuRes: Int) {
+        val popup = PopupMenu(requireContext(), view)
+        popup.menuInflater.inflate(menuRes, popup.menu)
+
+        popup.setOnMenuItemClickListener { menuItem: MenuItem ->
+            when(menuItem.itemId) {
+                R.id.option_1 -> {
+                    showDialogChangeCity()
+                } else -> {
+                    showDialogChangePhone()
+                }
+            }
+            true
+        }
+        popup.setOnDismissListener {
+            // Respond to popup being dismissed.
+        }
+        // Show the popup menu.
+        popup.show()
+    }
+
+    private fun showDialogChangeCity() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(resources.getString(R.string.menu_city_title))
+            .setMessage(resources.getString(R.string.menu_city_message))
+
+            .setNegativeButton(resources.getString(R.string.menu_city_negative)) { _, _ ->
+                return@setNegativeButton
+            }
+            .setPositiveButton(resources.getString(R.string.menu_city_positive)) { _, _ ->
+                viewModel.resetCity()
+            }
+            .show()
+    }
+
+    private fun showSmsErrorReceive() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(resources.getString(R.string.menu_sms_title))
+            .setMessage(resources.getString(R.string.menu_sms_message))
+
+            .setNegativeButton(resources.getString(R.string.menu_sms_negative)) { _, _ ->
+                return@setNegativeButton
+            }
+            .setPositiveButton(resources.getString(R.string.menu_sms_positive)) { _, _ ->
+                sendSms()
+            }
+            .show()
+    }
+
+    private fun showDialogChangePhone() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(resources.getString(R.string.menu_phone_title))
+            .setMessage(resources.getString(R.string.menu_phone_message))
+
+            .setNegativeButton(resources.getString(R.string.menu_phone_negative)) { _, _ ->
+                return@setNegativeButton
+            }
+            .setPositiveButton(resources.getString(R.string.menu_phone_positive)) { _, _ ->
+                viewModel.resetPhone()
+            }
+            .show()
+    }
+
     //При введении последней цифра СМС-кода - авторизация
-    private fun setSmsCode() {
+    private fun observeSmsCode() {
         binding.authField.etSmsCodeEdit.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 if (s?.length == 6) {
-                    getAuth(
+                    viewModel.getAuth(
                         binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), ""),
                         binding.authField.etSmsCodeEdit.text.toString()
                     )
@@ -182,11 +358,6 @@ class MapFragment : Fragment() {
         })
     }
 
-    //Авторизация пользователя
-    private fun getAuth(phoneNumber: String, smsCode: String) {
-        viewModel.getAuth(phoneNumber, smsCode)
-        observeAuth()
-    }
 
     //Проверка на смену номера телефона
     private fun checkPhoneNumberCodeDataChanged() {
@@ -201,7 +372,7 @@ class MapFragment : Fragment() {
             setOnEditorActionListener { _, actionId, _ ->
                 when (actionId) {
                     EditorInfo.IME_ACTION_DONE ->
-                        getAuth(
+                        viewModel.getAuth(
                             binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), ""),
                             binding.authField.etSmsCodeEdit.text.toString()
                         )
@@ -211,91 +382,13 @@ class MapFragment : Fragment() {
         }
     }
 
-    //Результат запроса городов
-    private fun observeCities() {
-        viewModel.getCitiesResponse.observe(viewLifecycleOwner) { result ->
-            when (result) {
-                is NetworkResult.Loading -> {
-                    binding.pbMain.visibility = View.VISIBLE
-                }
-                is NetworkResult.Success -> {
-                    binding.pbMain.visibility = View.GONE
-                    val data = result.data?.regions
-                    if (data != null) {
-                        result.data.let { selectCityAdapter.setNewData(it) }
-                    }
-                }
-                else -> {
-                    Toast.makeText(requireContext(), "ERROR", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    //Результат авторизации
-    private fun observeAuth() {
-        viewModel.getAuthResponse.observe(viewLifecycleOwner) { result ->
-            when(result) {
-                is NetworkResult.Loading -> {
-                    Toast.makeText(requireContext(), "LOADING ROUTES", Toast.LENGTH_SHORT).show()
-                }
-                is NetworkResult.Success -> {
-                    val data = result.data?.result
-                    if (data != null) {
-                        if (data.length > 1) binding.authField.root.visibility = View.GONE
-                    }
-                }
-                else -> {
-                    Toast.makeText(requireContext(), "ERROR", Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
-
-    //Результат получения маршрутов для выбранного города
-    private fun observeRoutes() {
-        viewModel.routeState.observe(viewLifecycleOwner) { result ->
-            val data = result.routes
-            val busList = mutableListOf<Route>()
-            for (route in data.values) {
-                busList.add(route)
-            }
-            selectBusAdapter.setNewData(busList)
-
-            for (route in data) {
-                val busRoute = route.value
-                if(busRoute.selectedDirection != null) {
-                    //Координаты для отрисовки маршрута
-                    val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
-                    //Список автобусов в зависимости от выбранного направления движения
-                    val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
-                    //Координаты для отрисовки конечной точки маршрута
-                    val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
-
-                    val points = routePoints.map { Point.fromLngLat(it.x, it.y) }
-                    val busPoints = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
-                    val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
-                    busRoute.pallet?.let {
-                        drawBuses(busPoints, it)
-                        drawRoute(points, it)
-                        drawFlags(flagPoint, it)
-                    }
-                } else {
-                    busRoute.pallet?.let {
-                        drawBuses(emptyList(), it)
-                        drawRoute(emptyList(), it)
-                        drawFlags(null, it)
-                    }
-                }
-            }
-        }
-    }
-
     //Отрисовка автобусов
     private fun drawBuses(points: List<Point>, pallet: Pallet) {
         val color = colorFor(pallet)
         val circleAnnotationManager = circles[pallet]
         circleAnnotationManager?.deleteAll()
+
+        if (points.isEmpty()) return
 
         val options = mutableListOf<CircleAnnotationOptions>()
         for (point in points) {

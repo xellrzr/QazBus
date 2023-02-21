@@ -17,4 +17,6 @@
     <color name="yellow">#FFFFFF00</color>
     <color name="cyan">#FF00FFFF</color>
     <color name="magenta">#FFFF00FF</color>
+
+    <color name="gold">#FFC107</color>
 </resources>

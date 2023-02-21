@@ -39,12 +39,27 @@ class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHold
                     card.setCardBackgroundColor(Color.WHITE)
                     ivDirection.visibility = View.GONE
                 }
+                if (route.isFavorite) {
+                    card.strokeColor = Color.rgb(255,215,0)
+                    card.strokeWidth = 6
+                    tvBusNumber.setTextColor(Color.rgb(255,215,0))
+                } else {
+                    card.strokeColor = Color.TRANSPARENT
+                    card.strokeWidth = 0
+                }
             }
             itemView.setOnClickListener {
                 onItemClickListener?.let {
                     it(route)
                     setMultipleSelection(adapterPosition)
                 }
+            }
+            itemView.setOnLongClickListener {
+                onLongItemClickListener?.let {
+                    it(route)
+                    setFavoriteSelection(adapterPosition)
+                }
+                true
             }
         }
     }
@@ -75,13 +90,25 @@ class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHold
         onItemClickListener = listener
     }
 
+    private var onLongItemClickListener:((Route) -> Unit)? = null
+    fun setOnLongClickListener(listener: (Route) -> Unit) {
+        onLongItemClickListener = listener
+    }
+
+    private fun setFavoriteSelection(adapterPosition: Int) {
+//        val route = busRoutes[adapterPosition]
+//            route.isFavorite = false
+//            busRoutes[adapterPosition].isFavorite = true
+        notifyItemChanged(adapterPosition)
+    }
+
     private fun setMultipleSelection(adapterPosition: Int) {
-        val route = busRoutes[adapterPosition]
-        if (route.selectedDirection == null) {
-            route.isSelected = false
-        } else {
-            busRoutes[adapterPosition].isSelected = true
-        }
+//        val route = busRoutes[adapterPosition]
+//        if (route.selectedDirection == null) {
+//            route.isSelected = false
+//        } else {
+//            busRoutes[adapterPosition].isSelected = true
+//        }
         notifyItemChanged(adapterPosition)
     }
 

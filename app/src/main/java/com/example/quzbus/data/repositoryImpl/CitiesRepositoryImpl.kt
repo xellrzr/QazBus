@@ -16,12 +16,20 @@ class CitiesRepositoryImpl @Inject constructor(
        return safeApiCall { api.getCities() }
     }
 
-    override fun setSelectCity(city: String) {
+    override fun setSelectCity(city: String?) {
         pref.setSelectCity(city)
     }
 
     override fun setCityId(cityId: Int) {
         pref.setCityId(cityId)
+    }
+
+    override fun isCitySelected(): Boolean {
+        return (pref.getSelectCity() != null)
+    }
+
+    override fun getCityId(): Int {
+        return pref.getCityId()
     }
 
 }

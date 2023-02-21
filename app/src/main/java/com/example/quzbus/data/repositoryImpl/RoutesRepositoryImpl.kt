@@ -15,13 +15,12 @@ class RoutesRepositoryImpl @Inject constructor(
     private val pref: AppSharedPreferences
 ) : RoutesRepository, BaseRepository() {
 
-    private val accessToken: String? = pref.getAccessToken()
-    private val phoneNumber: String? = pref.getPhoneNumber()
-    private val cityId: Int = pref.getCityId()
+    private val accessToken = pref.getAccessToken()
+    private val phoneNumber = pref.getPhoneNumber()
+    private val cityId get() = pref.getCityId()
 
-    override suspend fun getRoutes(cityId: Int): NetworkResult<Routes> {
-        if (accessToken != null && phoneNumber != null) {
-            pref.setCityId(cityId)
+    override suspend fun getRoutes(): NetworkResult<Routes> {
+        if (accessToken != null && phoneNumber != null && cityId != 0) {
             val response =  safeApiCall { api.getRoutes(accessToken, phoneNumber, cityId) }
             return when(response) {
                 is NetworkResult.Success -> NetworkResult.Success(response.data!!.toRoutes())

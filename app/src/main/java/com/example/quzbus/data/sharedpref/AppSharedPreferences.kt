@@ -8,12 +8,12 @@ class AppSharedPreferences @Inject constructor(
 ) {
 
     fun getAccessToken(): String? = sharedPreferences.getString(ACCESS_TOKEN_KEY, null)
-    fun setAccessToken(accessToken: String) {
+    fun setAccessToken(accessToken: String?) {
         sharedPreferences.edit().putString(ACCESS_TOKEN_KEY, accessToken).apply()
     }
 
     fun getSelectCity(): String? = sharedPreferences.getString(SELECT_CITY, null)
-    fun setSelectCity(city: String) {
+    fun setSelectCity(city: String?) {
         sharedPreferences.edit().putString(SELECT_CITY, city).apply()
     }
 
@@ -23,8 +23,14 @@ class AppSharedPreferences @Inject constructor(
     }
 
     fun getPhoneNumber(): String? = sharedPreferences.getString(PHONE_NUMBER, null)
-    fun setPhoneNumber(phoneNumber: String) {
+    fun setPhoneNumber(phoneNumber: String?) {
         sharedPreferences.edit().putString(PHONE_NUMBER, phoneNumber).apply()
+    }
+
+    fun getFavoriteRoute(route: String, cityId: Int): Boolean = sharedPreferences.getBoolean("$cityId + $route", false)
+    fun setFavoriteRoute(route: String, cityId: Int, isFavorite: Boolean) {
+        val key = "$cityId + $route"
+        sharedPreferences.edit().putBoolean(key, isFavorite).apply()
     }
 
     companion object {

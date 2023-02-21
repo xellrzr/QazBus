@@ -7,7 +7,7 @@ import com.example.quzbus.utils.NetworkResult
 
 interface RoutesRepository {
 
-    suspend fun getRoutes(cityId: Int): NetworkResult<Routes>
+    suspend fun getRoutes(): NetworkResult<Routes>
 
     suspend fun getRoute(route: String): NetworkResult<GetRouteResponse>
 

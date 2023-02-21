@@ -15,6 +15,7 @@
         android:background="@drawable/rounded_tv_shape"/>
 
     <TextView
+        android:id="@+id/tv_select_city_title"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Выберите город:"
