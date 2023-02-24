@@ -28,7 +28,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         app:layout_anchor="@id/standard_bottom_sheet"
-        app:layout_anchorGravity="top"
+        app:layout_anchorGravity="bottom"
         android:layout_marginBottom="150dp"/>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -40,7 +40,7 @@
         android:backgroundTint="@color/white"
         app:fabSize="mini"
         app:shapeAppearance="@style/fab_3_rounded"
-        android:layout_marginBottom="150dp"
+        android:layout_marginBottom="170dp"
         android:contentDescription="@string/fab_desc"
         app:srcCompat="@drawable/ic_settings"/>
 

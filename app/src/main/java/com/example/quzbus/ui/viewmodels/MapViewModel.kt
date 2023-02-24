@@ -14,9 +14,7 @@ import com.example.quzbus.domain.models.routes.Route
 import com.example.quzbus.domain.repository.*
 import com.example.quzbus.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import java.util.*
 import javax.inject.Inject
 import kotlin.collections.HashMap
@@ -177,21 +175,21 @@ class MapViewModel @Inject constructor(
         resetPool()
         citiesRepository.setCityId(0)
         citiesRepository.setSelectCity(null)
-        Log.d("TAG", "$pool")
-        Log.d("TAG", "${routeState.value}")
-
         getCities()
     }
 
     fun resetPhone() {
-        resetUserDataRepository.setPhoneNumber(null)
-        resetUserDataRepository.setAccessToken(null)
         refreshSheetState(
             isAuthorized = false,
+            isCitySelected = false,
             cities = _sheetState.value?.cities ?: emptyList(),
             routes = emptyList()
         )
         resetPool()
+        citiesRepository.setCityId(0)
+        citiesRepository.setSelectCity(null)
+        resetUserDataRepository.setPhoneNumber(null)
+        resetUserDataRepository.setAccessToken(null)
     }
 
     private fun getRoutes() {
@@ -249,35 +247,14 @@ class MapViewModel @Inject constructor(
         }
     }
 
-//    private fun resetPool() {
-//        try {
-//            for (i in pool.keys) {
-//                refreshRouteState(
-//                    route = pool[i],
-//                    pallet = pallet,
-//                    event = Event.CLEAR
-//                )
-//                pool[i]?.reset()
-//                pool.remove(i)
-//            }
-//        } catch (e:Exception) {
-//            Log.d("TAG", "${e.message}")
-//        }
-//        if (pool.isEmpty()) {
-//            cancelTimer()
-//        }
-//    }
-
     private fun resetPool() {
-        cancelTimer()
-        for (i in pool.values) {
-            if (pool.isNotEmpty()) pool.values.remove(i)
-        }
         refreshRouteState(
-            route = Route("0", "0"),
+            route = Route("0","0"),
             pallet = pallet,
             event = Event.CLEAR
         )
+        pool.clear()
+        if (pool.isEmpty()) cancelTimer()
     }
 
     private fun refreshSheetState(
@@ -354,13 +331,13 @@ class MapViewModel @Inject constructor(
         return smsCode.length == 6
     }
 
-
     //Запуск таймера
     private fun startTimer() {
         job = viewModelScope.launch {
-            while(true) {
+            while(isActive) {
                 ping()
                 delay(5_000)
+                yield()
             }
         }
     }
@@ -409,23 +386,27 @@ class MapViewModel @Inject constructor(
         )
     }
 
-    //Пинг маршрутов
     private fun ping() {
-        var pingPallet = next(pallet)
-        while (true) {
-            val route = pool[pingPallet]
-            if (route != null) {
-                getRoute(route.name)
-                Timer().schedule(1_000) {
-                    getBuses(route.name)
+        synchronized(this) {
+            var pingPallet = next(pallet)
+            while (true) {
+                val route = pool[pingPallet]
+                if (route != null) {
+                    getRoute(route.name)
+                    Timer().schedule(1_000) {
+                        synchronized(this) {
+                            getBuses(route.name)
+                        }
+                    }
+                    pallet = pingPallet
+                    break
+                } else {
+                    pingPallet = next(pingPallet)
                 }
-                pallet = pingPallet
-                break
-            } else {
-                pingPallet = next(pingPallet)
             }
         }
     }
+
 
     //Присваивание цвета паллетки
     private fun next(palette: Pallet): Pallet {

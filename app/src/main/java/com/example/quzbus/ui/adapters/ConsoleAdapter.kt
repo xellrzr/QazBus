@@ -1,6 +1,7 @@
 package com.example.quzbus.ui.adapters
 
 import android.graphics.Color
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
@@ -20,16 +21,16 @@ class ConsoleAdapter : RecyclerView.Adapter<ConsoleAdapter.ConsoleViewHolder>() 
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(route: Route) {
             binding.apply {
-                if (route.isSelected) {
                     route.pallet?.let { colorFor(it) }?.let { tvBusDirectionFrom.setTextColor(it) }
                     route.pallet?.let { colorFor(it) }?.let { tvBusDirectionTo.setTextColor(it) }
-                    if (route.selectedDirection == Direction.DIRECTION_A) {
-                        tvBusDirectionFrom.text = route.routeStart
-                        tvBusDirectionTo.text = route.routeFinish
-                    } else {
-                        tvBusDirectionFrom.text = route.routeStart
-                        tvBusDirectionTo.text = route.routeFinish
-                    }
+                if (route.selectedDirection == Direction.DIRECTION_A) {
+                    tvBusDirectionFrom.text = route.routeStart
+                    tvBusDirectionTo.text = route.routeFinish
+                    Log.d("TAG", "from DIR_A ${route.routeStart} + ${route.routeFinish}")
+                } else {
+                    tvBusDirectionFrom.text = route.routeFinish
+                    tvBusDirectionTo.text = route.routeStart
+                    Log.d("TAG", "from DIR_B ${route.routeFinish} + ${route.routeStart}")
                 }
             }
         }

@@ -1,12 +1,23 @@
 package com.example.quzbus.ui.fragments
 
+import android.Manifest
+import android.Manifest.permission.ACCESS_COARSE_LOCATION
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.location.Address
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
@@ -16,6 +27,7 @@ import android.viewbinding.library.fragment.viewBinding
 import android.widget.Toast
 import androidx.annotation.MenuRes
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -34,6 +46,8 @@ import com.example.quzbus.ui.viewmodels.Event
 import com.example.quzbus.ui.viewmodels.MapViewModel
 import com.example.quzbus.utils.NetworkResult
 import com.example.quzbus.utils.afterTextChanged
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mapbox.geojson.Point
 import com.mapbox.maps.MapView
@@ -43,12 +57,16 @@ import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.*
 import com.redmadrobot.inputmask.MaskedTextChangedListener
 import dagger.hilt.android.AndroidEntryPoint
+import java.util.*
+import kotlin.collections.HashMap
 
 @AndroidEntryPoint
 class MapFragment : Fragment() {
 
     private lateinit var mapView: MapView
     private lateinit var annotationApi: AnnotationPlugin
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private val permissionId = 2
 
     private val binding: FragmentMapBinding by viewBinding()
     private val selectCityAdapter by lazy { SelectCityAdapter() }
@@ -67,6 +85,8 @@ class MapFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireContext())
+
         mapView = binding.mapView
         mapView.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS)
         annotationApi = mapView.annotations
@@ -83,18 +103,82 @@ class MapFragment : Fragment() {
         setupRecyclerViewConsole()
         checkPhoneNumberCodeDataChanged()
         setupViewModel()
+
+        getLocation()
+    }
+
+    private fun isLocationEnabled(): Boolean {
+        val locationManager: LocationManager =
+            requireContext().getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+            LocationManager.NETWORK_PROVIDER
+        )
+    }
+
+    private fun checkPermissions(): Boolean {
+        if (ActivityCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            return true
+        }
+        return false
+    }
+    private fun requestPermissions() {
+        ActivityCompat.requestPermissions(
+            requireActivity(),
+            arrayOf(
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ),
+            permissionId
+        )
+    }
+    @SuppressLint("MissingSuperCall")
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == permissionId) {
+            if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                getLocation()
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission", "SetTextI18n")
+    private fun getLocation() {
+        if (checkPermissions()) {
+            if (isLocationEnabled()) {
+                fusedLocationClient.lastLocation.addOnCompleteListener(requireActivity()) { task ->
+                    val location: Location? = task.result
+                    if (location != null) {
+                        val geocoder = Geocoder(requireContext(), Locale.getDefault())
+                        val lat = location.latitude
+                        val long = location.longitude
+                        Log.d("TAG", "$lat + $long")
+                    }
+                }
+            } else {
+                Toast.makeText(requireContext(), "Please turn on location", Toast.LENGTH_LONG).show()
+                val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                startActivity(intent)
+            }
+        } else {
+            requestPermissions()
+        }
     }
 
     private fun setupAnnotationManager(annotationApi: AnnotationPlugin) {
-        for (pallet in Pallet.values()) {
+        Pallet.values().forEach { pallet ->
             lines[pallet] = annotationApi.createPolylineAnnotationManager()
-        }
-
-        for (pallet in Pallet.values()) {
             circles[pallet] = annotationApi.createCircleAnnotationManager()
-        }
-
-        for (pallet in Pallet.values()) {
             points[pallet] = annotationApi.createPointAnnotationManager()
         }
     }
@@ -114,7 +198,7 @@ class MapFragment : Fragment() {
                     }
                 }
                 else -> {
-
+                    //TODO
                 }
             }
         }
@@ -134,6 +218,7 @@ class MapFragment : Fragment() {
             binding.authField.root.visibility = if (it.isAuthorized) View.GONE else View.VISIBLE
             binding.selectCity.root.visibility = if (it.isCitySelected) View.GONE else View.VISIBLE
             binding.selectBus.root.visibility = if (!it.isCitySelected) View.GONE else View.VISIBLE
+
             if (it.isCitySelected) {
                 if (it.isAuthorized) {
                     selectBusAdapter.setNewData(it.routes)
@@ -154,9 +239,9 @@ class MapFragment : Fragment() {
         viewModel.routeState.observe(viewLifecycleOwner) { result ->
             val busRoute = result.route ?: return@observe
             val busPallet = result.pallet ?: return@observe
-            val selectedRoutes = mutableListOf<Route>()
-            if (busRoute.isSelected) selectedRoutes.add(busRoute)
-            consoleAdapter.setNewData(selectedRoutes)
+            val list = mutableListOf<Route>()
+            list.add(result.route)
+            consoleAdapter.setNewData(list)
 
             when(result.event) {
                 Event.CLEAR -> {
@@ -180,10 +265,17 @@ class MapFragment : Fragment() {
                 Event.REDRAW -> {
                     val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
                     val points = routePoints.map { Point.fromLngLat(it.x, it.y) }
-                    val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
-                    val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
+
+                    try {
+                        val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
+                        val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
+                        drawFlags(flagPoint, busPallet)
+                    } catch (e:Exception) {
+                        Log.d("TAG", "${e.message}")
+                    }
+
                     drawRoute(points, busPallet)
-                    drawFlags(flagPoint, busPallet)
+
                     val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
                     val busPoints = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
                     drawBuses(busPoints, busPallet)
@@ -310,6 +402,7 @@ class MapFragment : Fragment() {
             }
             .setPositiveButton(resources.getString(R.string.menu_city_positive)) { _, _ ->
                 viewModel.resetCity()
+                clearMap()
             }
             .show()
     }
@@ -380,6 +473,12 @@ class MapFragment : Fragment() {
                 false
             }
         }
+    }
+
+    private fun clearMap(){
+        lines.values.forEach { it.deleteAll() }
+        circles.values.forEach { it.deleteAll() }
+        points.values.forEach { it.deleteAll() }
     }
 
     //Отрисовка автобусов

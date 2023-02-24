@@ -46,6 +46,7 @@ class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHold
                 } else {
                     card.strokeColor = Color.TRANSPARENT
                     card.strokeWidth = 0
+                    tvBusNumber.setTextColor(Color.BLACK)
                 }
             }
             itemView.setOnClickListener {
