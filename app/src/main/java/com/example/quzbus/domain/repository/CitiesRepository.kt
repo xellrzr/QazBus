@@ -14,4 +14,6 @@ interface CitiesRepository{
     fun isCitySelected(): Boolean
 
     fun getCityId(): Int
+
+    fun getCity(): String?
 }

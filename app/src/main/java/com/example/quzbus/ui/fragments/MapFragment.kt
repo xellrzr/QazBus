@@ -1,15 +1,12 @@
 package com.example.quzbus.ui.fragments
 
 import android.Manifest
-import android.Manifest.permission.ACCESS_COARSE_LOCATION
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.location.Address
-import android.location.Geocoder
 import android.location.Location
 import android.location.LocationManager
 import android.net.Uri
@@ -22,6 +19,7 @@ import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.inputmethod.EditorInfo
 import android.viewbinding.library.fragment.viewBinding
 import android.widget.Toast
@@ -50,14 +48,16 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mapbox.geojson.Point
+import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
+import com.mapbox.maps.plugin.animation.CameraAnimatorOptions.Companion.cameraAnimatorOptions
+import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.annotation.AnnotationPlugin
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.*
 import com.redmadrobot.inputmask.MaskedTextChangedListener
 import dagger.hilt.android.AndroidEntryPoint
-import java.util.*
 import kotlin.collections.HashMap
 
 @AndroidEntryPoint
@@ -104,8 +104,63 @@ class MapFragment : Fragment() {
         checkPhoneNumberCodeDataChanged()
         setupViewModel()
 
+        showUserCity()
         getLocation()
+
     }
+
+    private fun mapViewAnimation() {
+        mapView.camera.apply {
+            val bearing = createBearingAnimator(cameraAnimatorOptions(-45.0)) {
+                duration = 4000
+                interpolator = AccelerateDecelerateInterpolator()
+            }
+            val zoom = createZoomAnimator(
+                cameraAnimatorOptions(14.0) {
+                    startValue(3.0)
+                }
+            ) {
+                duration = 4000
+                interpolator = AccelerateDecelerateInterpolator()
+            }
+            playAnimatorsSequentially(zoom, bearing)
+        }
+    }
+
+    private fun showUserCity() {
+        val city = viewModel.getCity()
+        if (city != null) cameraPosition(cityCoordinates(city))
+    }
+
+    private fun cityCoordinates(city: String): Point {
+        return when (city) {
+            "Астана" -> Point.fromLngLat(71.45, 51.18)
+            "Алматы" -> Point.fromLngLat(79.93, 43.26)
+            "Актау" -> Point.fromLngLat(51.17, 43.65)
+            "Актобе" -> Point.fromLngLat(57.21, 50.28)
+            "Атырау" -> Point.fromLngLat(51.88, 47.12)
+            "Каскелен" -> Point.fromLngLat(71.45, 51.18)//todo
+            "Костанай" -> Point.fromLngLat(63.62, 53.21)
+            "Кызылорда" -> Point.fromLngLat(65.51, 44.85)
+            "Петропавловск" -> Point.fromLngLat(69.15, 54.87)
+            "Талгар" -> Point.fromLngLat(71.45, 51.18)//todo
+            "Талдыкорган" -> Point.fromLngLat(78.37, 45.02)
+            "Туркестан" -> Point.fromLngLat(68.25, 43.30)
+            "Усть-каменогорск" -> Point.fromLngLat(82.61, 49.97)
+            else -> Point.fromLngLat(0.1,0.1)
+        }
+    }
+
+    private fun cameraPosition(point: Point?) {
+        val cameraPosition = CameraOptions.Builder()
+            .center(point)
+            .zoom(11.0)
+            .build()
+
+        mapView.getMapboxMap().setCamera(cameraPosition)
+        mapViewAnimation()
+    }
+
 
     private fun isLocationEnabled(): Boolean {
         val locationManager: LocationManager =
@@ -139,6 +194,8 @@ class MapFragment : Fragment() {
             permissionId
         )
     }
+
+    @Deprecated("Deprecated in Java")
     @SuppressLint("MissingSuperCall")
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -159,9 +216,9 @@ class MapFragment : Fragment() {
                 fusedLocationClient.lastLocation.addOnCompleteListener(requireActivity()) { task ->
                     val location: Location? = task.result
                     if (location != null) {
-                        val geocoder = Geocoder(requireContext(), Locale.getDefault())
                         val lat = location.latitude
                         val long = location.longitude
+                        drawUserLocation(lat,long)
                         Log.d("TAG", "$lat + $long")
                     }
                 }
@@ -257,10 +314,15 @@ class MapFragment : Fragment() {
                 Event.ROUTE -> {
                     val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
                     val points = routePoints.map { Point.fromLngLat(it.x, it.y) }
-                    val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
-                    val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
+                    try {
+                        val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
+                        val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
+                        drawFlags(flagPoint, busPallet)
+                    } catch (e:Exception) {
+                        Log.d("TAG", "${e.message}")
+                    }
+
                     drawRoute(points, busPallet)
-                    drawFlags(flagPoint, busPallet)
                 }
                 Event.REDRAW -> {
                     val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
@@ -287,7 +349,6 @@ class MapFragment : Fragment() {
     private var lines = HashMap<Pallet, PolylineAnnotationManager>()
     private var circles = HashMap<Pallet, CircleAnnotationManager>()
     private var points = HashMap<Pallet, PointAnnotationManager>()
-
 
     //Выбор маршрута, в случае заполненности паллетки на 6 маршрутов - сообщение.
     private fun observeSelectedRoute() {
@@ -362,6 +423,7 @@ class MapFragment : Fragment() {
     private fun listenSelectedRegion() {
         selectCityAdapter.setOnItemClickListener {
             viewModel.selectCity(it.city, it.rid)
+            cameraPosition(cityCoordinates(it.city))
         }
     }
 
@@ -522,9 +584,7 @@ class MapFragment : Fragment() {
     private fun drawFlags(point: Point?, pallet: Pallet) {
         val pointAnnotationManager = points[pallet]
         pointAnnotationManager?.deleteAll()
-        if (point == null) {
-            return
-        }
+        if (point == null) return
 
         val bitmap: Bitmap = BitmapFactory.decodeResource(resources,R.drawable.finish)
 
@@ -537,6 +597,22 @@ class MapFragment : Fragment() {
         options.add(option)
 
         pointAnnotationManager?.create(options)
+    }
+
+    private fun drawUserLocation(long: Double?, lang: Double?) {
+        val pointAnnotationManager = annotationApi.createPointAnnotationManager()
+        val userLong = long ?: 0.0
+        val userLang = lang ?: 0.0
+
+        val bitmap: Bitmap = BitmapFactory.decodeResource(resources, R.drawable.user_location)
+
+        val options = PointAnnotationOptions()
+            .withPoint(Point.fromLngLat(userLong, userLang))
+            .withIconImage(bitmap)
+            .withIconSize(2.0)
+
+        pointAnnotationManager.create(options)
+
     }
 
     //Выбор цвета маршрута

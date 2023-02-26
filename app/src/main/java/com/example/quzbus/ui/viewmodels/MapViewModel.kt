@@ -51,6 +51,10 @@ class MapViewModel @Inject constructor(
     private val _sheetState: MutableLiveData<SheetState> = MutableLiveData()
     val sheetState: LiveData<SheetState> = _sheetState
 
+    fun getCity(): String? {
+        return citiesRepository.getCity()
+    }
+
     //Метод для получения SMS - кода
     fun getSmsCode(phoneNumber: String) {
         viewModelScope.launch {

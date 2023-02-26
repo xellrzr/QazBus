@@ -32,4 +32,8 @@ class CitiesRepositoryImpl @Inject constructor(
         return pref.getCityId()
     }
 
+    override fun getCity(): String? {
+        return pref.getSelectCity()
+    }
+
 }
