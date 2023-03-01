@@ -42,7 +42,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            app:layout_constraintGuide_percent="0.4"/>
+            app:layout_constraintGuide_percent="0.5"/>
 
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/et_sms_code"
@@ -78,16 +78,16 @@
             android:id="@+id/btn_send"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:text="Отправить"
-            android:textColor="@color/white"
-            android:textSize="11sp"
-            style="?attr/materialButtonOutlinedStyle"
-            app:layout_constraintStart_toStartOf="@id/edit_btn_guideline"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
             android:layout_marginStart="@dimen/dimen_4"
-            android:layout_marginEnd="@dimen/dimen_4"/>
+            android:layout_marginEnd="@dimen/dimen_4"
+            android:backgroundTint="#FFFFFF"
+            android:text="Получить код"
+            android:textColor="@color/purple_500"
+            android:textSize="10sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@id/edit_btn_guideline"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

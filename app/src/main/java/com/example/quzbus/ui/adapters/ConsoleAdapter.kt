@@ -26,11 +26,11 @@ class ConsoleAdapter : RecyclerView.Adapter<ConsoleAdapter.ConsoleViewHolder>() 
                 if (route.selectedDirection == Direction.DIRECTION_A) {
                     tvBusDirectionFrom.text = route.routeStart
                     tvBusDirectionTo.text = route.routeFinish
-                    Log.d("TAG", "from DIR_A ${route.routeStart} + ${route.routeFinish}")
+                    Log.d("TAG", "from DIR_A ${route.routeStart} ${route.routeFinish}")
                 } else {
                     tvBusDirectionFrom.text = route.routeFinish
                     tvBusDirectionTo.text = route.routeStart
-                    Log.d("TAG", "from DIR_B ${route.routeFinish} + ${route.routeStart}")
+                    Log.d("TAG", "from DIR_B ${route.routeStart} ${route.routeFinish}")
                 }
             }
         }

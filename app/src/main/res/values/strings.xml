@@ -26,7 +26,7 @@
 
     <!-- Ошибка СМС -->
     <string name="menu_sms_title">Ошибка</string>
-    <string name="menu_sms_message">Вы уже авторизованы, отправьте слово PAS на короткий номер 2505</string>
+    <string name="menu_sms_message">SMS-код не отправлен, отправьте слово PAS на короткий номер 2505</string>
     <string name="menu_sms_positive">Отправить</string>
     <string name="menu_sms_negative">Нет</string>
 

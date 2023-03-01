@@ -17,7 +17,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import java.util.*
 import javax.inject.Inject
-import kotlin.collections.HashMap
 import kotlin.concurrent.schedule
 
 @HiltViewModel
@@ -32,7 +31,8 @@ class MapViewModel @Inject constructor(
     private var job: Job? = null
     private var pallet = Pallet.MAGENTA
     private val pool = hashMapOf<Pallet, Route>()
-    private var routes = HashMap<String, Route>()
+    private val routes = hashMapOf<String, Route>()
+    private val map = hashMapOf<String, Route>()
 
     //Хранит ответ на запрос получение SMS - кода
     private val _getSmsCodeResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
@@ -40,6 +40,7 @@ class MapViewModel @Inject constructor(
 
     //Хранит ответ на запрос получение авторизации
     private val _getAuthResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
+    val authResponse: LiveData<NetworkResult<Message>> = _getAuthResponse
 
     //Хранит стейт и проверку на заполненность данных номер телефона и SMS код
     private val _authFormState: MutableLiveData<AuthFormState> = MutableLiveData()
@@ -50,6 +51,9 @@ class MapViewModel @Inject constructor(
 
     private val _sheetState: MutableLiveData<SheetState> = MutableLiveData()
     val sheetState: LiveData<SheetState> = _sheetState
+
+    private val _routeConsole: MutableLiveData<List<Route>> = MutableLiveData()
+    val routeConsole: LiveData<List<Route>> = _routeConsole
 
     fun getCity(): String? {
         return citiesRepository.getCity()
@@ -82,7 +86,7 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    fun setup() {
+    fun refreshAuth() {
         val isCitySelected = citiesRepository.isCitySelected()
         val isUserLoggedIn = authRepository.isUserLoggedIn()
         refreshSheetState(
@@ -96,6 +100,7 @@ class MapViewModel @Inject constructor(
         citiesRepository.setSelectCity(cityName)
         citiesRepository.setCityId(cityId)
         refreshSheetState()
+        Log.d("TAG", "getRoutes call")
         if (authRepository.isUserLoggedIn()) getRoutes()
     }
 
@@ -109,6 +114,10 @@ class MapViewModel @Inject constructor(
                         val isEmpty = routeObj.routeA.isEmpty()
                         //заполняем маршрут
                         result.data?.let { routeObj.fillFrom(it) }
+
+                        map[routeObj.name] = routeObj
+                        _routeConsole.value = map.values.map { it }
+
                         if (isEmpty) {
                             refreshRouteState(
                                 route = routeObj,
@@ -141,11 +150,13 @@ class MapViewModel @Inject constructor(
                         pallet = model.pallet,
                         event = Event.REDRAW
                     )
-                    //Если маршрута нет - обнуяем его направление и очищаем паллетку
+                    //Если маршрута нет - обнуляем его направление и очищаем паллетку
                 } else {
                     model.selectedDirection = null
                     model.isSelected = false
                     model.pallet?.let { drain(it) }
+                    map.remove(model.name)
+                    _routeConsole.value = map.values.map { it }
                 }
                 //Если направление равно нулю - тогда задаем направление движение на А
             } else {
@@ -174,9 +185,11 @@ class MapViewModel @Inject constructor(
 
     fun resetCity() {
         refreshSheetState(
-            isCitySelected = false
+            isCitySelected = false,
+            routes = emptyList()
         )
         resetPool()
+        routes.clear()
         citiesRepository.setCityId(0)
         citiesRepository.setSelectCity(null)
         getCities()
@@ -212,7 +225,7 @@ class MapViewModel @Inject constructor(
                 }
                 is NetworkResult.Error -> {
                     error = "Ошибка получения маршрутов"
-                    routes = hashMapOf()
+                    routes.clear()
                 }
                 is NetworkResult.Loading -> {
                     TODO()
@@ -240,14 +253,14 @@ class MapViewModel @Inject constructor(
                     if (regions != null) {
                         cities = regions
                     } else {
-                        error = "Список городой пустой"
+                        error = "Список городов пуст"
                     }
                 }
                 is NetworkResult.Error -> {
                     error = "Ошибка получения списка городов"
                 }
             }
-            refreshSheetState(cities = cities, error = error)
+            refreshSheetState(cities = cities, routes = emptyList(),error = error)
         }
     }
 
@@ -410,7 +423,6 @@ class MapViewModel @Inject constructor(
             }
         }
     }
-
 
     //Присваивание цвета паллетки
     private fun next(palette: Pallet): Pallet {
