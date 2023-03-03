@@ -32,7 +32,7 @@
         app:layout_anchorGravity="end"
         android:backgroundTint="@color/white"
         app:fabSize="mini"
-        android:layout_marginBottom="150dp"
+        android:layout_marginBottom="@dimen/dimen_6"
         app:shapeAppearance="@style/fab_3_rounded"
         android:contentDescription="@string/fab_desc"
         app:srcCompat="@drawable/ic_settings"/>
@@ -41,29 +41,31 @@
         android:id="@+id/auth_field"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="100dp"
         app:layout_anchor="@id/standard_bottom_sheet"
-        app:layout_anchorGravity="top"/>
+        android:layout_marginBottom="20dp"/>
 
-    <FrameLayout
+    <LinearLayout
         android:id="@+id/standard_bottom_sheet"
         style="@style/Widget.Material3.BottomSheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_insetEdge="bottom"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+
+        <View
+            android:id="@+id/view"
+            android:layout_width="@dimen/dimen_100"
+            android:layout_height="@dimen/dimen_8"
+            android:layout_gravity="center"
+            android:layout_marginTop="@dimen/dimen_12"
+            android:background="@drawable/rounded_tv_shape"/>
 
         <!-- Drag handle for accessibility -->
         <com.google.android.material.bottomsheet.BottomSheetDragHandleView
             android:id="@+id/drag_handle"
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
-
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:visibility="gone"/>
 
         <include
             android:id="@+id/select_city"
@@ -75,6 +77,6 @@
             layout="@layout/fragment_select_bus"
             android:visibility="gone"/>
 
-    </FrameLayout>
+    </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

@@ -100,8 +100,7 @@ class MapViewModel @Inject constructor(
         citiesRepository.setSelectCity(cityName)
         citiesRepository.setCityId(cityId)
         refreshSheetState()
-        Log.d("TAG", "getRoutes call")
-        if (authRepository.isUserLoggedIn()) getRoutes()
+        getRoutes()
     }
 
     //Получение маршрута для выбранного автобуса
@@ -117,6 +116,7 @@ class MapViewModel @Inject constructor(
 
                         map[routeObj.name] = routeObj
                         _routeConsole.value = map.values.map { it }
+                        Log.d("TAG", "${map.keys}")
 
                         if (isEmpty) {
                             refreshRouteState(
@@ -155,6 +155,7 @@ class MapViewModel @Inject constructor(
                     model.selectedDirection = null
                     model.isSelected = false
                     model.pallet?.let { drain(it) }
+
                     map.remove(model.name)
                     _routeConsole.value = map.values.map { it }
                 }
@@ -312,6 +313,7 @@ class MapViewModel @Inject constructor(
         val sortedList = routes.sortedWith(
             compareBy({ !it.isSelected }, { !it.isFavorite } ,{ it.name.toIntOrNull() }))
         refreshSheetState(routes = sortedList)
+        Log.d("TAG", "message")
     }
 
     //Получение списка автобусов для выбранного маршрута

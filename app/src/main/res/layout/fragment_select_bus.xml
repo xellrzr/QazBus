@@ -7,13 +7,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <View
-        android:layout_width="@dimen/dimen_100"
-        android:layout_height="@dimen/dimen_8"
-        android:layout_gravity="center"
-        android:layout_marginTop="@dimen/dimen_12"
-        android:background="@drawable/rounded_tv_shape"/>
-
     <TextView
         android:id="@+id/tv_select_bus_route_title"
         android:layout_width="wrap_content"
