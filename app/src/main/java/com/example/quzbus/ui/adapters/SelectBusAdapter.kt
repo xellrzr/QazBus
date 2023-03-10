@@ -40,9 +40,9 @@ class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHold
                     ivDirection.visibility = View.GONE
                 }
                 if (route.isFavorite) {
-                    card.strokeColor = Color.rgb(255,215,0)
+                    card.strokeColor = Color.rgb(71,74,81)
                     card.strokeWidth = 6
-                    tvBusNumber.setTextColor(Color.rgb(255,215,0))
+                    tvBusNumber.setTextColor(Color.rgb(71,74,81))
                 } else {
                     card.strokeColor = Color.TRANSPARENT
                     card.strokeWidth = 0

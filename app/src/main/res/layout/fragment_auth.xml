@@ -5,7 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/card"
     style="?attr/materialCardViewElevatedStyle"
-    android:backgroundTint="@color/purple_500"
+    android:backgroundTint="@color/grey"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
@@ -80,9 +80,9 @@
             android:layout_height="0dp"
             android:layout_marginStart="@dimen/dimen_4"
             android:layout_marginEnd="@dimen/dimen_4"
-            android:backgroundTint="#FFFFFF"
+            android:backgroundTint="#DCDCDC"
             android:text="Получить код"
-            android:textColor="@color/purple_500"
+            android:textColor="@color/black"
             android:textSize="10sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"

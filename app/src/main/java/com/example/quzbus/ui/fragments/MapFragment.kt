@@ -109,47 +109,7 @@ class MapFragment : Fragment() {
         getLocation()
     }
 
-    private fun showUserLocation() {
-        mapView.location.updateSettings {
-            enabled = true
-            pulsingEnabled = true
-        }
-    }
-
-    @SuppressLint("MissingPermission", "SetTextI18n")
-    private fun getLocation() {
-        if (checkPermissions()) {
-            showUserLocation()
-        } else {
-            requestPermissions()
-        }
-    }
-
-    private fun checkPermissions(): Boolean {
-        if (ActivityCompat.checkSelfPermission(
-                requireContext(),
-                ACCESS_COARSE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED &&
-            ActivityCompat.checkSelfPermission(
-                requireContext(),
-                ACCESS_FINE_LOCATION
-            ) == PackageManager.PERMISSION_GRANTED
-        ) {
-            return true
-        }
-        return false
-    }
-    private fun requestPermissions() {
-        ActivityCompat.requestPermissions(
-            requireActivity(),
-            arrayOf(
-                ACCESS_COARSE_LOCATION,
-                ACCESS_FINE_LOCATION
-            ),
-            permissionId
-        )
-    }
-
+    // region Observers
     private fun observeAuth() {
         viewModel.authResponse.observe(viewLifecycleOwner) {
             when(it) {
@@ -163,7 +123,6 @@ class MapFragment : Fragment() {
         }
     }
 
-    // region Observers
     private fun observeSms() {
         viewModel.getSmsCodeResponse.observe(viewLifecycleOwner) {
             when(it) {
@@ -223,6 +182,7 @@ class MapFragment : Fragment() {
         viewModel.routeState.observe(viewLifecycleOwner) { result ->
             val busRoute = result.route ?: return@observe
             val busPallet = result.pallet ?: return@observe
+            visibilityText()
 
             when(result.event) {
                 Event.CLEAR -> {
@@ -298,8 +258,8 @@ class MapFragment : Fragment() {
     private fun setupListeners() {
         listenSmsCode()
         listenSelectedRegion()
-        observeSelectedRoute()
-        observeFavoriteRoute()
+        listenSelectedRoute()
+        listenFavoriteRoute()
         showSettings()
     }
 
@@ -359,9 +319,22 @@ class MapFragment : Fragment() {
             }
         }
     }
+
+    private fun visibilityText() {
+        binding.selectBus.tvSelectBusRouteTitle.visibility =  if (viewModel.checkPool()) View.VISIBLE else View.GONE
+    }
     // endregion Helpers Methods(Phone Mask & SMS-field)
 
     // region Map Draw & helper methods for Map
+    @SuppressLint("MissingPermission", "SetTextI18n")
+    private fun getLocation() {
+        if (checkPermissions()) {
+            showUserLocation()
+        } else {
+            requestPermissions()
+        }
+    }
+
     private fun showUserCity() {
         val city = viewModel.getCity()
         if (city != null) cameraPosition(cityCoordinates(city))
@@ -389,6 +362,7 @@ class MapFragment : Fragment() {
                 .withPoint(pointA)
                 .withCircleColor(ContextCompat.getColor(requireContext(), color))
                 .withCircleRadius(8.0)
+                .withCircleStrokeWidth(1.0)
 
             options.add(optionA)
 
@@ -453,37 +427,40 @@ class MapFragment : Fragment() {
 
     private fun mapViewAnimation() {
         mapView.camera.apply {
-            val bearing = createBearingAnimator(cameraAnimatorOptions(-45.0)) {
-                duration = 4000
-                interpolator = AccelerateDecelerateInterpolator()
-            }
             val zoom = createZoomAnimator(
-                cameraAnimatorOptions(14.0) {
+                cameraAnimatorOptions(12.0) {
                     startValue(3.0)
                 }
             ) {
                 duration = 4000
                 interpolator = AccelerateDecelerateInterpolator()
             }
-            playAnimatorsSequentially(zoom, bearing)
+            playAnimatorsSequentially(zoom)
+        }
+    }
+
+    private fun showUserLocation() {
+        mapView.location.updateSettings {
+            enabled = true
+            pulsingEnabled = true
         }
     }
 
     private fun cityCoordinates(city: String): Point {
         return when (city) {
-            "Астана" -> Point.fromLngLat(71.45, 51.18)
-            "Алматы" -> Point.fromLngLat(76.91, 43.27)
-            "Актау" -> Point.fromLngLat(51.17, 43.65)
-            "Актобе" -> Point.fromLngLat(57.21, 50.28)
-            "Атырау" -> Point.fromLngLat(51.88, 47.12)
-            "Каскелен" -> Point.fromLngLat(76.62, 43.20)
-            "Костанай" -> Point.fromLngLat(63.62, 53.21)
-            "Кызылорда" -> Point.fromLngLat(65.51, 44.85)
-            "Петропавловск" -> Point.fromLngLat(69.15, 54.87)
-            "Талгар" -> Point.fromLngLat(77.23, 43.30)
-            "Талдыкорган" -> Point.fromLngLat(78.37, 45.02)
-            "Туркестан" -> Point.fromLngLat(68.25, 43.30)
-            "Усть-Каменогорск" -> Point.fromLngLat(82.62, 49.94)
+            "Астана" -> Point.fromLngLat(71.447429, 51.168014)
+            "Алматы" -> Point.fromLngLat(76.878096, 43.236352)
+            "Актау" -> Point.fromLngLat(51.175112, 43.657283)
+            "Актобе" -> Point.fromLngLat(57.171368, 50.283985)
+            "Атырау" -> Point.fromLngLat(51.917083, 47.105050)
+            "Каскелен" -> Point.fromLngLat(76.627544, 43.199252)
+            "Костанай" -> Point.fromLngLat(63.640218, 53.212268)
+            "Кызылорда" -> Point.fromLngLat(65.490363, 44.846396)
+            "Петропавловск" -> Point.fromLngLat(69.149375, 54.863476)
+            "Талгар" -> Point.fromLngLat(77.240361, 43.302768)
+            "Талдыкорган" -> Point.fromLngLat(78.380359, 45.015255)
+            "Туркестан" -> Point.fromLngLat(68.239034, 43.304990)
+            "Усть-Каменогорск" -> Point.fromLngLat(82.599988, 49.970557)
             else -> Point.fromLngLat(0.1,0.1)
         }
     }
@@ -491,7 +468,7 @@ class MapFragment : Fragment() {
     private fun cameraPosition(point: Point?) {
         val cameraPosition = CameraOptions.Builder()
             .center(point)
-            .zoom(10.0)
+            .zoom(8.0)
             .build()
 
         mapView.getMapboxMap().setCamera(cameraPosition)
@@ -501,7 +478,7 @@ class MapFragment : Fragment() {
 
     // region Listeners
     //Выбор маршрута, в случае заполненности паллетки на 6 маршрутов - сообщение.
-    private fun observeSelectedRoute() {
+    private fun listenSelectedRoute() {
         selectBusAdapter.setOnItemClickListener {
             val success = viewModel.selectRoute(it.name)
             if (!success) {
@@ -513,7 +490,7 @@ class MapFragment : Fragment() {
         }
     }
 
-    private fun observeFavoriteRoute() {
+    private fun listenFavoriteRoute() {
         selectBusAdapter.setOnLongClickListener {
             viewModel.favoriteRoute(it.name)
         }
@@ -616,5 +593,32 @@ class MapFragment : Fragment() {
             .show()
     }
     // endregion Settings for reset City & Phone
+
+    // region Request & Check Permissions
+    private fun checkPermissions(): Boolean {
+        if (ActivityCompat.checkSelfPermission(
+                requireContext(),
+                ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED &&
+            ActivityCompat.checkSelfPermission(
+                requireContext(),
+                ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            return true
+        }
+        return false
+    }
+    private fun requestPermissions() {
+        ActivityCompat.requestPermissions(
+            requireActivity(),
+            arrayOf(
+                ACCESS_COARSE_LOCATION,
+                ACCESS_FINE_LOCATION
+            ),
+            permissionId
+        )
+    }
+    // endregion Request & Check Permissions
 
 }

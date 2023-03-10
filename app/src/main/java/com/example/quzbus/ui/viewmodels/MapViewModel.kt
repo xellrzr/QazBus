@@ -55,10 +55,7 @@ class MapViewModel @Inject constructor(
     private val _routeConsole: MutableLiveData<List<Route>> = MutableLiveData()
     val routeConsole: LiveData<List<Route>> = _routeConsole
 
-    fun getCity(): String? {
-        return citiesRepository.getCity()
-    }
-
+    // region Auth methods
     //Метод для получения SMS - кода
     fun getSmsCode(phoneNumber: String) {
         viewModelScope.launch {
@@ -75,17 +72,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    //Метод для проверки изменения данных в полях авторизации
-    fun authDataChanged(phoneNumber: String, smsCode: String) {
-        if (!isPhoneNumberValid(phoneNumber)) {
-            _authFormState.value = AuthFormState(phoneNumberError = R.string.incorrect_phone_number)
-        } else if (!isSmsCodeValid(smsCode)) {
-            _authFormState.value = AuthFormState(smsCodeError = R.string.incorrect_sms_code)
-        } else {
-            _authFormState.value = AuthFormState(isDataValid = true)
-        }
-    }
-
     fun refreshAuth() {
         val isCitySelected = citiesRepository.isCitySelected()
         val isUserLoggedIn = authRepository.isUserLoggedIn()
@@ -96,15 +82,21 @@ class MapViewModel @Inject constructor(
         if (isCitySelected && isUserLoggedIn) getRoutes() else getCities()
     }
 
-    fun selectCity(cityName: String, cityId: Int) {
-        citiesRepository.setSelectCity(cityName)
-        citiesRepository.setCityId(cityId)
-        refreshSheetState()
-        getRoutes()
+    //Метод для проверки изменения данных в полях авторизации
+    fun authDataChanged(phoneNumber: String, smsCode: String) {
+        if (!isPhoneNumberValid(phoneNumber)) {
+            _authFormState.value = AuthFormState(phoneNumberError = R.string.incorrect_phone_number)
+        } else if (!isSmsCodeValid(smsCode)) {
+            _authFormState.value = AuthFormState(smsCodeError = R.string.incorrect_sms_code)
+        } else {
+            _authFormState.value = AuthFormState(isDataValid = true)
+        }
     }
+    // endregion Auth methods
 
+    // region Route
     //Получение маршрута для выбранного автобуса
-    fun getRoute(route: String) {
+    private fun getRoute(route: String) {
         viewModelScope.launch {
             when(val result = routesRepository.getRoute(route)) {
                 is NetworkResult.Success -> {
@@ -174,148 +166,6 @@ class MapViewModel @Inject constructor(
         return true
     }
 
-    fun favoriteRoute(route: String) {
-        val model = routes[route]
-        val name = model?.name ?: ""
-        val cityId = citiesRepository.getCityId()
-        model?.isFavorite = if (model != null) !model.isFavorite else false
-        val isFavorite = model?.isFavorite ?: false
-        favoriteRouteRepository.setFavoriteRoute(name, cityId, isFavorite)
-        updateRoutesList()
-    }
-
-    fun resetCity() {
-        refreshSheetState(
-            isCitySelected = false,
-            routes = emptyList()
-        )
-        resetPool()
-        routes.clear()
-        citiesRepository.setCityId(0)
-        citiesRepository.setSelectCity(null)
-        getCities()
-    }
-
-    fun resetPhone() {
-        refreshSheetState(
-            isAuthorized = false,
-            isCitySelected = false,
-            cities = _sheetState.value?.cities ?: emptyList(),
-            routes = emptyList()
-        )
-        resetPool()
-        citiesRepository.setCityId(0)
-        citiesRepository.setSelectCity(null)
-        resetUserDataRepository.setPhoneNumber(null)
-        resetUserDataRepository.setAccessToken(null)
-    }
-
-    private fun getRoutes() {
-        viewModelScope.launch {
-            var error: String? = null
-            when(val result = routesRepository.getRoutes()) {
-                is NetworkResult.Success -> {
-                    val dataRoutes = result.data?.routes ?: emptyList()
-                    for (route in dataRoutes) {
-                        //проверяем по каждому маршруту, находится ли он в избранном
-                        route.isFavorite = favoriteRouteRepository.getFavoriteRoute(
-                            route.name, citiesRepository.getCityId())
-                        //заполняем мапу маршрутами
-                        routes[route.name] = route
-                    }
-                }
-                is NetworkResult.Error -> {
-                    error = "Ошибка получения маршрутов"
-                    routes.clear()
-                }
-                is NetworkResult.Loading -> {
-                    TODO()
-                }
-            }
-            if (error != null) {
-                refreshSheetState(error = error)
-            } else {
-                updateRoutesList()
-            }
-        }
-    }
-
-    //Метод для получения списка городов
-    private fun getCities() {
-        viewModelScope.launch {
-            var cities = emptyList<Region>()
-            var error: String? = null
-            when(val result = citiesRepository.getCities()) {
-                is NetworkResult.Loading -> {
-                    TODO()
-                }
-                is NetworkResult.Success -> {
-                    val regions = result.data?.regions
-                    if (regions != null) {
-                        cities = regions
-                    } else {
-                        error = "Список городов пуст"
-                    }
-                }
-                is NetworkResult.Error -> {
-                    error = "Ошибка получения списка городов"
-                }
-            }
-            refreshSheetState(cities = cities, routes = emptyList(),error = error)
-        }
-    }
-
-    private fun resetPool() {
-        refreshRouteState(
-            route = Route("0","0"),
-            pallet = pallet,
-            event = Event.CLEAR
-        )
-        pool.clear()
-        if (pool.isEmpty()) cancelTimer()
-    }
-
-    private fun refreshSheetState(
-        isAuthorized: Boolean = authRepository.isUserLoggedIn(),
-        isCitySelected: Boolean = citiesRepository.isCitySelected(),
-        cities: List<Region> = emptyList(),
-        routes: List<Route> = emptyList(),
-        error: String? = null
-    ) {
-        _sheetState.postValue(
-            SheetState(
-                isAuthorized = isAuthorized,
-                isCitySelected = isCitySelected,
-                cities = cities,
-                routes = routes,
-                error = error
-            )
-        )
-    }
-
-    private fun refreshRouteState(
-        route: Route? = null,
-        pallet: Pallet? = null,
-        event: Event,
-    ) {
-        _routeState.postValue(
-            RouteState(
-                route = route,
-                pallet = pallet,
-                event = event
-            )
-        )
-    }
-
-    //Сортировка маршрутов
-    private fun updateRoutesList() {
-        val routes = routes.values.map { it }
-        val sortedList = routes.sortedWith(
-            compareBy({ !it.isSelected }, { !it.isFavorite } ,{ it.name.toIntOrNull() }))
-        refreshSheetState(routes = sortedList)
-        Log.d("TAG", "message")
-    }
-
     //Получение списка автобусов для выбранного маршрута
     private fun getBuses(route: String) {
         viewModelScope.launch {
@@ -340,14 +190,20 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    //Метод для проверки заполненности поля ввода номера телефона
-    private fun isPhoneNumberValid(phoneNumber: String): Boolean {
-           return phoneNumber.isNotBlank()
+    fun favoriteRoute(route: String) {
+        val model = routes[route]
+        val name = model?.name ?: ""
+        val cityId = citiesRepository.getCityId()
+        model?.isFavorite = if (model != null) !model.isFavorite else false
+        val isFavorite = model?.isFavorite ?: false
+        favoriteRouteRepository.setFavoriteRoute(name, cityId, isFavorite)
+        updateRoutesList()
     }
+    // endregion Route
 
-    //Метод для проверки длины введенного SMS - кода
-    private fun isSmsCodeValid(smsCode: String): Boolean {
-        return smsCode.length == 6
+    // region Route methods
+    fun checkPool(): Boolean {
+        return pool.isEmpty()
     }
 
     //Запуск таймера
@@ -425,6 +281,166 @@ class MapViewModel @Inject constructor(
             }
         }
     }
+    private fun resetPool() {
+        refreshRouteState(
+            route = Route("0","0"),
+            pallet = pallet,
+            event = Event.CLEAR
+        )
+        pool.clear()
+        if (pool.isEmpty()) cancelTimer()
+    }
+    // endregion Route methods
+
+    // region Refresh States
+    private fun refreshSheetState(
+        isAuthorized: Boolean = authRepository.isUserLoggedIn(),
+        isCitySelected: Boolean = citiesRepository.isCitySelected(),
+        cities: List<Region> = emptyList(),
+        routes: List<Route> = emptyList(),
+        error: String? = null
+    ) {
+        _sheetState.postValue(
+            SheetState(
+                isAuthorized = isAuthorized,
+                isCitySelected = isCitySelected,
+                cities = cities,
+                routes = routes,
+                error = error
+            )
+        )
+    }
+
+    private fun refreshRouteState(
+        route: Route? = null,
+        pallet: Pallet? = null,
+        event: Event,
+    ) {
+        _routeState.postValue(
+            RouteState(
+                route = route,
+                pallet = pallet,
+                event = event
+            )
+        )
+    }
+    // endregion Refresh States
+
+    // region Menu Reset Methods
+    fun resetCity() {
+        refreshSheetState(
+            isCitySelected = false,
+            routes = emptyList()
+        )
+        resetPool()
+        routes.clear()
+        citiesRepository.setCityId(0)
+        citiesRepository.setSelectCity(null)
+        getCities()
+    }
+
+    fun resetPhone() {
+        refreshSheetState(
+            isAuthorized = false,
+            isCitySelected = false,
+            cities = _sheetState.value?.cities ?: emptyList(),
+            routes = emptyList()
+        )
+        resetPool()
+        citiesRepository.setCityId(0)
+        citiesRepository.setSelectCity(null)
+        resetUserDataRepository.setPhoneNumber(null)
+        resetUserDataRepository.setAccessToken(null)
+    }
+    // endregion Menu Reset Methods
+
+    // region Cities & Routes
+    fun selectCity(cityName: String, cityId: Int) {
+        citiesRepository.setSelectCity(cityName)
+        citiesRepository.setCityId(cityId)
+        refreshSheetState()
+        getRoutes()
+    }
+
+    fun getCity(): String? {
+        return citiesRepository.getCity()
+    }
+
+    //Сортировка маршрутов
+    private fun updateRoutesList() {
+        val routes = routes.values.map { it }
+        val sortedList = routes.sortedWith(
+            compareBy({ !it.isSelected }, { !it.isFavorite } ,{ it.name.toIntOrNull() }))
+        refreshSheetState(routes = sortedList)
+        Log.d("TAG", "message")
+    }
+
+    //Метод для получения списка городов
+    private fun getCities() {
+        viewModelScope.launch {
+            var cities = emptyList<Region>()
+            var error: String? = null
+            when(val result = citiesRepository.getCities()) {
+                is NetworkResult.Loading -> {
+                    TODO()
+                }
+                is NetworkResult.Success -> {
+                    val regions = result.data?.regions
+                    if (regions != null) {
+                        cities = regions
+                    } else {
+                        error = "Список городов пуст"
+                    }
+                }
+                is NetworkResult.Error -> {
+                    error = "Ошибка получения списка городов"
+                }
+            }
+            refreshSheetState(cities = cities, routes = emptyList(),error = error)
+        }
+    }
+
+    private fun getRoutes() {
+        viewModelScope.launch {
+            var error: String? = null
+            when(val result = routesRepository.getRoutes()) {
+                is NetworkResult.Success -> {
+                    val dataRoutes = result.data?.routes ?: emptyList()
+                    for (route in dataRoutes) {
+                        //проверяем по каждому маршруту, находится ли он в избранном
+                        route.isFavorite = favoriteRouteRepository.getFavoriteRoute(
+                            route.name, citiesRepository.getCityId())
+                        //заполняем мапу маршрутами
+                        routes[route.name] = route
+                    }
+                }
+                is NetworkResult.Error -> {
+                    error = "Ошибка получения маршрутов"
+                    routes.clear()
+                }
+                is NetworkResult.Loading -> {
+                    TODO()
+                }
+            }
+            if (error != null) {
+                refreshSheetState(error = error)
+            } else {
+                updateRoutesList()
+            }
+        }
+    }
+    // endregion Cities & Routes
+
+    // region Helpers Methods
+    //Метод для проверки заполненности поля ввода номера телефона
+    private fun isPhoneNumberValid(phoneNumber: String): Boolean {
+        return phoneNumber.isNotBlank()
+    }
+
+    //Метод для проверки длины введенного SMS - кода
+    private fun isSmsCodeValid(smsCode: String): Boolean {
+        return smsCode.length == 6
+    }
 
     //Присваивание цвета паллетки
     private fun next(palette: Pallet): Pallet {
@@ -437,5 +453,5 @@ class MapViewModel @Inject constructor(
             Pallet.MAGENTA -> Pallet.RED
         }
     }
-
+    // endregion Helpers Methods
 }
