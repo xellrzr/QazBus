@@ -1,4 +1,4 @@
-package com.example.quzbus.ui.fragments
+package com.revolage.quzbus.ui.fragments
 
 import android.Manifest.permission.ACCESS_COARSE_LOCATION
 import android.Manifest.permission.ACCESS_FINE_LOCATION
@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
 import android.net.Uri
 import android.os.Bundle
 import android.text.Editable
@@ -29,28 +30,32 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.example.quzbus.R
-import com.example.quzbus.databinding.FragmentMapBinding
-import com.example.quzbus.domain.models.routes.Direction
-import com.example.quzbus.domain.models.routes.Pallet
-import com.example.quzbus.ui.adapters.SelectBusAdapter
-import com.example.quzbus.ui.adapters.SelectCityAdapter
-import com.example.quzbus.ui.viewmodels.Event
-import com.example.quzbus.ui.viewmodels.MapViewModel
-import com.example.quzbus.utils.NetworkResult
-import com.example.quzbus.utils.afterTextChanged
+import com.revolage.quzbus.R
+import com.revolage.quzbus.databinding.FragmentMapBinding
+import com.revolage.quzbus.domain.models.routes.Direction
+import com.revolage.quzbus.domain.models.routes.Pallet
+import com.revolage.quzbus.ui.adapters.SelectBusAdapter
+import com.revolage.quzbus.ui.adapters.SelectCityAdapter
+import com.revolage.quzbus.ui.viewmodels.Event
+import com.revolage.quzbus.ui.viewmodels.MapViewModel
+import com.revolage.quzbus.utils.NetworkResult
+import com.revolage.quzbus.utils.afterTextChanged
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mapbox.geojson.Point
 import com.mapbox.maps.CameraOptions
 import com.mapbox.maps.MapView
 import com.mapbox.maps.Style
+import com.mapbox.maps.extension.observable.eventdata.CameraChangedEventData
 import com.mapbox.maps.plugin.animation.CameraAnimatorOptions.Companion.cameraAnimatorOptions
 import com.mapbox.maps.plugin.animation.camera
 import com.mapbox.maps.plugin.annotation.AnnotationPlugin
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.annotation.generated.*
+import com.mapbox.maps.plugin.delegates.listeners.OnCameraChangeListener
 import com.mapbox.maps.plugin.locationcomponent.location
 import com.redmadrobot.inputmask.MaskedTextChangedListener
+import com.revolage.quzbus.utils.hideKeyboard
+import com.revolage.quzbus.utils.showKeyboard
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -61,12 +66,13 @@ class MapFragment : Fragment() {
 
     private val binding: FragmentMapBinding by viewBinding()
     private val selectCityAdapter by lazy { SelectCityAdapter() }
-    private val selectBusAdapter by lazy { SelectBusAdapter() }
+    private val selectBusAdapter by lazy { SelectBusAdapter(requireContext()) }
 //    private val consoleAdapter by lazy { ConsoleAdapter() }
     private val viewModel: MapViewModel by viewModels()
     private val lines = hashMapOf<Pallet, PolylineAnnotationManager>()
-    private val circles = hashMapOf<Pallet, CircleAnnotationManager>()
     private val points = hashMapOf<Pallet, PointAnnotationManager>()
+    private val pointsBuses = hashMapOf<Pallet, PointAnnotationManager>()
+    private val busStops = hashMapOf<Pallet, PointAnnotationManager>()
 
     private val permissionId = 2
 
@@ -94,6 +100,7 @@ class MapFragment : Fragment() {
         observeAuth()
         observeSms()
         observeSmsFieldEdit()
+        observePhoneFieldEdit()
         observeSheetState()
         observeRouteState()
 //        observeRouteConsole()
@@ -107,6 +114,7 @@ class MapFragment : Fragment() {
         checkPhoneNumberCodeDataChanged()
         showUserCity()
         getLocation()
+        listenCameraChange()
     }
 
     // region Observers
@@ -117,7 +125,7 @@ class MapFragment : Fragment() {
                     viewModel.refreshAuth()
                 }
                 else -> {
-                    //TODO
+                    // TODO
                 }
             }
         }
@@ -132,7 +140,7 @@ class MapFragment : Fragment() {
                     }
                 }
                 else -> {
-                    //TODO
+                    // TODO
                 }
             }
         }
@@ -148,6 +156,23 @@ class MapFragment : Fragment() {
                         binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), ""),
                         binding.authField.etSmsCodeEdit.text.toString()
                     )
+                    hideKeyboard()
+                } else {
+                    showKeyboard()
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+    }
+
+    private fun observePhoneFieldEdit() {
+        binding.authField.etPhoneNumberEdit.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                if (s?.length == 16) {
+                    hideKeyboard()
+                } else {
+                    showKeyboard()
                 }
             }
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
@@ -189,6 +214,7 @@ class MapFragment : Fragment() {
                     drawBuses(emptyList(), emptyList() ,busPallet)
                     drawRoute(emptyList(), busPallet)
                     drawFlags(null, busPallet)
+                    drawStops(emptyList(), busPallet)
                 }
                 Event.BUS -> {
                     val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
@@ -199,6 +225,7 @@ class MapFragment : Fragment() {
                 Event.ROUTE -> {
                     val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
                     val points = routePoints.map { Point.fromLngLat(it.x, it.y) }
+
                     try {
                         val routeFinish = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA.last() else busRoute.routeB.last()
                         val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
@@ -208,6 +235,15 @@ class MapFragment : Fragment() {
                     }
 
                     drawRoute(points, busPallet)
+
+                    if (result.showStops) {
+                        val stops = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeStopsA else busRoute.routeStopsB
+                        val stopsCord = stops.map { Point.fromLngLat(it.point.x, it.point.y) }
+
+                        drawStops(stopsCord, busPallet)
+                    } else {
+                        drawStops(emptyList(), busPallet)
+                    }
                 }
                 Event.REDRAW -> {
                     val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
@@ -223,10 +259,29 @@ class MapFragment : Fragment() {
 
                     drawRoute(points, busPallet)
 
+                    if (result.showStops) {
+                        val stops = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeStopsA else busRoute.routeStopsB
+                        val stopsCord = stops.map { Point.fromLngLat(it.point.x, it.point.y) }
+
+                        drawStops(stopsCord, busPallet)
+                    } else {
+                        drawStops(emptyList(), busPallet)
+                    }
+
                     val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
                     val busPointsA = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
                     val busPointsB = directionBuses.map { Point.fromLngLat(it.pointB.x, it.pointB.y) }
                     drawBuses(busPointsB, busPointsA ,busPallet)
+                }
+                Event.ZOOM -> {
+                    if (result.showStops) {
+                        val stops = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeStopsA else busRoute.routeStopsB
+                        val stopsCord = stops.map { Point.fromLngLat(it.point.x, it.point.y) }
+
+                        drawStops(stopsCord, busPallet)
+                    } else {
+                        drawStops(emptyList(), busPallet)
+                    }
                 }
             }
         }
@@ -249,8 +304,9 @@ class MapFragment : Fragment() {
     private fun setupAnnotationManager(annotationApi: AnnotationPlugin) {
         Pallet.values().forEach { pallet ->
             lines[pallet] = annotationApi.createPolylineAnnotationManager()
-            circles[pallet] = annotationApi.createCircleAnnotationManager()
             points[pallet] = annotationApi.createPointAnnotationManager()
+            pointsBuses[pallet] = annotationApi.createPointAnnotationManager()
+            busStops[pallet] = annotationApi.createPointAnnotationManager()
         }
     }
 
@@ -342,39 +398,68 @@ class MapFragment : Fragment() {
 
     private fun clearMap(){
         lines.values.forEach { it.deleteAll() }
-        circles.values.forEach { it.deleteAll() }
         points.values.forEach { it.deleteAll() }
+        pointsBuses.values.forEach{ it.deleteAll() }
+        busStops.values.forEach{ it.deleteAll() }
+    }
+
+    //Отрисовка остановок
+    private fun drawStops(stops: List<Point>, pallet: Pallet) {
+        val pointAnnotationManager = busStops[pallet]
+        pointAnnotationManager?.deleteAll()
+        if (stops.isEmpty()) return
+
+        val bitmap: Bitmap = BitmapFactory.decodeResource(resources, R.drawable.icon_bus_stop)
+        val pointsOptions = mutableListOf<PointAnnotationOptions>()
+        for (stop in stops) {
+            val options = PointAnnotationOptions()
+                .withPoint(stop)
+                .withIconImage(bitmap)
+                .withIconSize(0.8)
+            pointsOptions.add(options)
+        }
+        pointAnnotationManager?.create(pointsOptions)
     }
 
     //Отрисовка автобусов
     private fun drawBuses(pointsA: List<Point>, pointsB: List<Point>, pallet: Pallet) {
-        val color = colorFor(pallet)
-        val colorDark = R.color.black
-        val circleAnnotationManager = circles[pallet]
-        circleAnnotationManager?.deleteAll()
+        val pointAnnotationManager = pointsBuses[pallet]
+        pointAnnotationManager?.deleteAll()
 
         if (pointsA.isEmpty()) return
 
-        val options = mutableListOf<CircleAnnotationOptions>()
+        val bitmap: Bitmap = BitmapFactory.decodeResource(resources,viewModel.getIconId())
+
+        val pointsOptions = mutableListOf<PointAnnotationOptions>()
         for (index in pointsA.indices) {
-            val pointA = pointsA[index]
-            val optionA = CircleAnnotationOptions()
-                .withPoint(pointA)
-                .withCircleColor(ContextCompat.getColor(requireContext(), color))
-                .withCircleRadius(8.0)
-                .withCircleStrokeWidth(1.0)
+            val pointStart = pointsA[index]
+            val pointFinish = pointsB[index]
 
-            options.add(optionA)
+            val loc1 = android.location.Location("")
+            loc1.latitude = pointStart.latitude()
+            loc1.longitude = pointStart.longitude()
 
-            val pointB = pointsB[index]
-            val optionB = CircleAnnotationOptions()
-                .withPoint(pointB)
-                .withCircleColor(ContextCompat.getColor(requireContext(), colorDark))
-                .withCircleRadius(3.0)
+            val loc2 = android.location.Location("")
+            loc2.latitude = pointFinish.latitude()
+            loc2.longitude = pointFinish.longitude()
 
-            options.add(optionB)
+            val direction = loc1.bearingTo(loc2) + 90f
+
+            val rotatedBitMap = rotateBitmap(bitmap, direction)
+
+            val pointOption = PointAnnotationOptions()
+                .withPoint(pointStart)
+                .withIconImage(rotatedBitMap)
+                .withIconSize(1.2)
+
+            pointsOptions.add(pointOption)
         }
-        circleAnnotationManager?.create(options)
+        pointAnnotationManager?.create(pointsOptions)
+    }
+
+    private fun rotateBitmap(bitmap: Bitmap, degrees: Float): Bitmap {
+        val matrix = Matrix().apply { postRotate(degrees) }
+        return Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
     }
 
     //Отрисовка маршрута
@@ -388,7 +473,7 @@ class MapFragment : Fragment() {
             val option = PolylineAnnotationOptions()
                 .withPoints(points)
                 .withLineColor(ContextCompat.getColor(requireContext(), color))
-                .withLineWidth(5.0)
+                .withLineWidth(4.5)
             options.add(option)
         }
         polyLineAnnotationManager?.create(options)
@@ -432,7 +517,7 @@ class MapFragment : Fragment() {
                     startValue(3.0)
                 }
             ) {
-                duration = 4000
+                duration = 3000
                 interpolator = AccelerateDecelerateInterpolator()
             }
             playAnimatorsSequentially(zoom)
@@ -477,6 +562,14 @@ class MapFragment : Fragment() {
     // endregion Map Draw & helper methods for Map
 
     // region Listeners
+    private fun listenCameraChange() {
+        val listener = OnCameraChangeListener { eventData: CameraChangedEventData ->
+            val zoom = mapView.getMapboxMap().cameraState.zoom
+            viewModel.setZoomLevel(zoom)
+        }
+        mapView.getMapboxMap().addOnCameraChangeListener(listener)
+    }
+
     //Выбор маршрута, в случае заполненности паллетки на 6 маршрутов - сообщение.
     private fun listenSelectedRoute() {
         selectBusAdapter.setOnItemClickListener {
@@ -537,8 +630,10 @@ class MapFragment : Fragment() {
             when(menuItem.itemId) {
                 R.id.option_1 -> {
                     showDialogChangeCity()
-                } else -> {
+                } R.id.option_2 -> {
                     showDialogChangePhone()
+                } else -> {
+                    viewModel.setIconId()
                 }
             }
             true
@@ -620,5 +715,4 @@ class MapFragment : Fragment() {
         )
     }
     // endregion Request & Check Permissions
-
 }

@@ -1,12 +1,12 @@
-package com.example.quzbus.ui.adapters
+package com.revolage.quzbus.ui.adapters
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.example.quzbus.data.models.response.Region
-import com.example.quzbus.databinding.ItemCityBinding
-import com.example.quzbus.utils.MyDiffUtil
+import com.revolage.quzbus.data.models.response.Region
+import com.revolage.quzbus.databinding.ItemCityBinding
+import com.revolage.quzbus.utils.MyDiffUtil
 
 class SelectCityAdapter() : RecyclerView.Adapter<SelectCityAdapter.SelectCityViewHolder>() {
 

@@ -1,11 +1,11 @@
-package com.example.quzbus
+package com.revolage.quzbus
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.NavigationUI
-import com.example.quzbus.databinding.ActivityMainBinding
+import com.revolage.quzbus.databinding.ActivityMainBinding
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

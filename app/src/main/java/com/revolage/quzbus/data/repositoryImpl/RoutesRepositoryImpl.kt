@@ -1,13 +1,13 @@
-package com.example.quzbus.data.repositoryImpl
+package com.revolage.quzbus.data.repositoryImpl
 
 import android.util.Log
-import com.example.quzbus.data.models.response.getbuses.GetBusesResponse
-import com.example.quzbus.data.models.response.getroute.GetRouteResponse
-import com.example.quzbus.data.remote.QazBusApi
-import com.example.quzbus.data.sharedpref.AppSharedPreferences
-import com.example.quzbus.domain.models.routes.Routes
-import com.example.quzbus.domain.repository.RoutesRepository
-import com.example.quzbus.utils.NetworkResult
+import com.revolage.quzbus.data.models.response.getbuses.GetBusesResponse
+import com.revolage.quzbus.data.models.response.getroute.GetRouteResponse
+import com.revolage.quzbus.data.remote.QazBusApi
+import com.revolage.quzbus.data.sharedpref.AppSharedPreferences
+import com.revolage.quzbus.domain.models.routes.Routes
+import com.revolage.quzbus.domain.repository.RoutesRepository
+import com.revolage.quzbus.utils.NetworkResult
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import javax.inject.Inject

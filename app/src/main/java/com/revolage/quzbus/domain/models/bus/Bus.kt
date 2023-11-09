@@ -1,7 +1,7 @@
-package com.example.quzbus.domain.models.bus
+package com.revolage.quzbus.domain.models.bus
 
-import com.example.quzbus.domain.models.routes.Direction
-import com.example.quzbus.domain.models.routes.Point
+import com.revolage.quzbus.domain.models.routes.Direction
+import com.revolage.quzbus.domain.models.routes.Point
 
 data class Bus(
     val transportNumber: String,

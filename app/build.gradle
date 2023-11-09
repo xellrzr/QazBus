@@ -7,22 +7,22 @@ plugins {
 }
 
 android {
-    namespace 'com.example.quzbus'
+    namespace 'com.revolage.quzbus'
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.example.quzbus"
+        applicationId "com.revolage.quzbus"
         minSdk 24
         targetSdk 33
-        versionCode 1
-        versionName "1.0"
+        versionCode 3
+        versionName "1.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
         release {
-            minifyEnabled true
+            minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

@@ -8,6 +8,7 @@
     <string name="fab_desc">Меню настроек</string>
     <string name="menu_option_01">Сменить город</string>
     <string name="menu_option_02">Сменить номер</string>
+    <string name="menu_option_03">Сменить скин</string>
 
     <string name="select_route">Выберите маршрут</string>
     <string name="select_route_error">Авторизуйтесь, чтобы выбрать город</string>

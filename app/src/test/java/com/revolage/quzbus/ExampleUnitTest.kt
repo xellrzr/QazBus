@@ -1,4 +1,4 @@
-package com.example.quzbus
+package com.revolage.quzbus
 
 import org.junit.Test
 

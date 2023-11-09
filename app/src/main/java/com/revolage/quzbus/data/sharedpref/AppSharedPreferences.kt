@@ -1,4 +1,4 @@
-package com.example.quzbus.data.sharedpref
+package com.revolage.quzbus.data.sharedpref
 
 import android.content.SharedPreferences
 import javax.inject.Inject
@@ -33,11 +33,18 @@ class AppSharedPreferences @Inject constructor(
         sharedPreferences.edit().putBoolean(key, isFavorite).apply()
     }
 
+    fun setIconId(iconId: Int) {
+        sharedPreferences.edit().putInt(ICON_ID, iconId).apply()
+    }
+
+    fun getIconId(): Int = sharedPreferences.getInt(ICON_ID,0)
+
     companion object {
         const val SHARED_PREFS = "APP_SHARED_PREFS"
         const val ACCESS_TOKEN_KEY = "access_token"
         const val SELECT_CITY = "select_city"
         const val PHONE_NUMBER = "phone_number"
         const val CITY_ID = "city_id"
+        const val ICON_ID = "icon_id"
     }
 }

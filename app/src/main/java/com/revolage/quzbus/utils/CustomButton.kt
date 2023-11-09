@@ -1,4 +1,4 @@
-package com.example.quzbus.utils
+package com.revolage.quzbus.utils
 
 import android.content.Context
 import android.util.AttributeSet
@@ -6,7 +6,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.cardview.widget.CardView
-import com.example.quzbus.R
+import com.revolage.quzbus.R
 
 class CustomButton(context: Context, attributeSet: AttributeSet): LinearLayout(context, attributeSet) {
 

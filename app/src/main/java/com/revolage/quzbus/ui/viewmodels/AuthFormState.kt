@@ -1,4 +1,4 @@
-package com.example.quzbus.ui.viewmodels
+package com.revolage.quzbus.ui.viewmodels
 
 data class AuthFormState(
     val phoneNumberError: Int? = null,

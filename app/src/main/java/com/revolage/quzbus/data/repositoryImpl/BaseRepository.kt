@@ -1,6 +1,6 @@
-package com.example.quzbus.data.repositoryImpl
+package com.revolage.quzbus.data.repositoryImpl
 
-import com.example.quzbus.utils.NetworkResult
+import com.revolage.quzbus.utils.NetworkResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException

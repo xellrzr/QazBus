@@ -1,4 +1,4 @@
-package com.example.quzbus.utils
+package com.revolage.quzbus.utils
 
 import androidx.recyclerview.widget.DiffUtil
 

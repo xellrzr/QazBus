@@ -1,7 +1,7 @@
-package com.example.quzbus.di
+package com.revolage.quzbus.di
 
-import com.example.quzbus.data.remote.QazBusApi
-import com.example.quzbus.utils.Constants.Companion.BASE_URL
+import com.revolage.quzbus.data.remote.QazBusApi
+import com.revolage.quzbus.utils.Constants.Companion.BASE_URL
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

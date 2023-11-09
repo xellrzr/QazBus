@@ -1,9 +1,9 @@
-package com.example.quzbus.data.remote
+package com.revolage.quzbus.data.remote
 
-import com.example.quzbus.data.models.response.getroute.GetRouteResponse
-import com.example.quzbus.data.models.response.Message
-import com.example.quzbus.data.models.response.getroutes.GetRoutesResponse
-import com.example.quzbus.data.models.response.getbuses.GetBusesResponse
+import com.revolage.quzbus.data.models.response.getroute.GetRouteResponse
+import com.revolage.quzbus.data.models.response.Message
+import com.revolage.quzbus.data.models.response.getroutes.GetRoutesResponse
+import com.revolage.quzbus.data.models.response.getbuses.GetBusesResponse
 import retrofit2.Response
 import retrofit2.http.Field
 import retrofit2.http.FormUrlEncoded

@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/mapFragment"
-        android:name="com.example.quzbus.ui.fragments.MapFragment"
+        android:name="com.revolage.quzbus.ui.fragments.MapFragment"
         android:label="MapFragment"
         tools:layout="@layout/fragment_map"/>
 </navigation>

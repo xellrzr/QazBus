@@ -1,8 +1,8 @@
-package com.example.quzbus.di
+package com.revolage.quzbus.di
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.example.quzbus.data.sharedpref.AppSharedPreferences
+import com.revolage.quzbus.data.sharedpref.AppSharedPreferences
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

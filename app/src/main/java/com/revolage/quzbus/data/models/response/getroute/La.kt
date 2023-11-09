@@ -1,6 +1,6 @@
-package com.example.quzbus.data.models.response.getroute
+package com.revolage.quzbus.data.models.response.getroute
 
-import com.example.quzbus.domain.models.routes.Point
+import com.revolage.quzbus.domain.models.routes.Point
 
 data class La(
     val X: Double,

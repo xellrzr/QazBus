@@ -1,7 +1,7 @@
-package com.example.quzbus.ui.viewmodels
+package com.revolage.quzbus.ui.viewmodels
 
-import com.example.quzbus.data.models.response.Region
-import com.example.quzbus.domain.models.routes.Route
+import com.revolage.quzbus.data.models.response.Region
+import com.revolage.quzbus.domain.models.routes.Route
 
 data class SheetState(
     val isAuthorized: Boolean = false,

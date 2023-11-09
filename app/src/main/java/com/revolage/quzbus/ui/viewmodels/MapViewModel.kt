@@ -1,18 +1,19 @@
-package com.example.quzbus.ui.viewmodels
+package com.revolage.quzbus.ui.viewmodels
 
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.quzbus.R
-import com.example.quzbus.data.models.response.Message
-import com.example.quzbus.data.models.response.Region
-import com.example.quzbus.domain.models.routes.Direction
-import com.example.quzbus.domain.models.routes.Pallet
-import com.example.quzbus.domain.models.routes.Route
-import com.example.quzbus.domain.repository.*
-import com.example.quzbus.utils.NetworkResult
+import com.revolage.quzbus.R
+import com.revolage.quzbus.data.models.response.Message
+import com.revolage.quzbus.data.models.response.Region
+import com.revolage.quzbus.domain.models.routes.Direction
+import com.revolage.quzbus.domain.models.routes.Pallet
+import com.revolage.quzbus.domain.models.routes.Route
+import com.revolage.quzbus.domain.repository.*
+import com.revolage.quzbus.utils.BusIconsUtils
+import com.revolage.quzbus.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import java.util.*
@@ -25,7 +26,8 @@ class MapViewModel @Inject constructor(
     private val citiesRepository: CitiesRepository,
     private val routesRepository: RoutesRepository,
     private val resetUserDataRepository: ResetUserDataRepository,
-    private val favoriteRouteRepository: FavoriteRouteRepository
+    private val favoriteRouteRepository: FavoriteRouteRepository,
+    private val iconRepository: IconRepository
 ) : ViewModel() {
 
     private var job: Job? = null
@@ -33,6 +35,7 @@ class MapViewModel @Inject constructor(
     private val pool = hashMapOf<Pallet, Route>()
     private val routes = hashMapOf<String, Route>()
     private val map = hashMapOf<String, Route>()
+    private val iconsList = BusIconsUtils.iconsList
 
     //Хранит ответ на запрос получение SMS - кода
     private val _getSmsCodeResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
@@ -54,6 +57,26 @@ class MapViewModel @Inject constructor(
 
     private val _routeConsole: MutableLiveData<List<Route>> = MutableLiveData()
     val routeConsole: LiveData<List<Route>> = _routeConsole
+
+    private val stopsZoomLevel: Double = 13.3 //зум при котором начнут отображаться остановки
+    private var zoomLevel: Double = 0.0 //текущий зум
+
+    fun getIconId(): Int = iconsList[iconRepository.getIconId()]
+
+    fun setIconId() {
+        val iconId = iconRepository.getIconId()
+        iconRepository.setIconId((iconId + 1) % iconsList.size)
+    }
+
+    fun setZoomLevel(zoom: Double) {
+        val isStopsShowedOld = zoomLevel > stopsZoomLevel
+        val isStopsShowNew = zoom > stopsZoomLevel
+
+        zoomLevel = zoom
+        if (isStopsShowedOld != isStopsShowNew) {
+            pool.forEach { refreshRouteState(route = it.value, pallet = it.key, event = Event.ZOOM)}
+        }
+    }
 
     // region Auth methods
     //Метод для получения SMS - кода
@@ -315,13 +338,13 @@ class MapViewModel @Inject constructor(
         route: Route? = null,
         pallet: Pallet? = null,
         event: Event,
+        showStops: Boolean = zoomLevel > stopsZoomLevel
     ) {
-        _routeState.postValue(
-            RouteState(
-                route = route,
-                pallet = pallet,
-                event = event
-            )
+        _routeState.value = RouteState(
+            route = route,
+            pallet = pallet,
+            event = event,
+            showStops = showStops
         )
     }
     // endregion Refresh States

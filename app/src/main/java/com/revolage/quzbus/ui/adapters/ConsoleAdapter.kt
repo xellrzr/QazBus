@@ -1,4 +1,4 @@
-package com.example.quzbus.ui.adapters
+package com.revolage.quzbus.ui.adapters
 
 import android.graphics.Color
 import android.util.Log
@@ -6,12 +6,11 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.example.quzbus.R
-import com.example.quzbus.databinding.ItemConsoleBinding
-import com.example.quzbus.domain.models.routes.Direction
-import com.example.quzbus.domain.models.routes.Pallet
-import com.example.quzbus.domain.models.routes.Route
-import com.example.quzbus.utils.MyDiffUtil
+import com.revolage.quzbus.databinding.ItemConsoleBinding
+import com.revolage.quzbus.domain.models.routes.Direction
+import com.revolage.quzbus.domain.models.routes.Pallet
+import com.revolage.quzbus.domain.models.routes.Route
+import com.revolage.quzbus.utils.MyDiffUtil
 
 class ConsoleAdapter : RecyclerView.Adapter<ConsoleAdapter.ConsoleViewHolder>() {
 

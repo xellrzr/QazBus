@@ -12,47 +12,36 @@
     android:minHeight="40dp"
     app:cardCornerRadius="@dimen/dimen_4">
 
-    <LinearLayout
+    <TextView
+        android:id="@+id/tv_bus_number"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal"
-        android:layout_gravity="top|center_horizontal">
+        android:textColor="?attr/colorOnPrimary"
+        android:layout_gravity="center"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        tools:text="25M"/>
 
-        <TextView
-            android:id="@+id/tv_bus_number"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            tools:text="25M"
-            android:maxLength="3"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="@color/black"
-            android:gravity="center_vertical"/>
+    <ImageView
+        android:id="@+id/iv_direction"
+        android:layout_width="18dp"
+        android:layout_height="14dp"
+        tools:src="@drawable/arrow_up"
+        android:layout_marginEnd="2dp"
+        android:layout_marginTop="2dp"
+        android:layout_gravity="end"/>
 
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <ImageView
-                android:id="@+id/iv_direction"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                tools:src="@drawable/arrow_up"/>
-
-            <TextView
-                android:id="@+id/tv_bus_online"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                tools:text="4"
-                android:textColor="@color/black"
-                android:textSize="14sp"
-                android:gravity="center"
-                android:visibility="invisible"/>
-
-
-        </LinearLayout>
-
-    </LinearLayout>
+    <TextView
+        android:id="@+id/tv_bus_online"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|bottom"
+        android:gravity="bottom"
+        android:layout_marginEnd="2dp"
+        android:visibility="visible"
+        android:textStyle="bold"
+        android:textSize="10sp"
+        android:textColor="@color/black"
+        tools:text="1"/>
 
 </com.google.android.material.card.MaterialCardView>

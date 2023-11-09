@@ -1,9 +1,9 @@
-package com.example.quzbus.domain.repository
+package com.revolage.quzbus.domain.repository
 
-import com.example.quzbus.data.models.response.getbuses.GetBusesResponse
-import com.example.quzbus.data.models.response.getroute.GetRouteResponse
-import com.example.quzbus.domain.models.routes.Routes
-import com.example.quzbus.utils.NetworkResult
+import com.revolage.quzbus.data.models.response.getbuses.GetBusesResponse
+import com.revolage.quzbus.data.models.response.getroute.GetRouteResponse
+import com.revolage.quzbus.domain.models.routes.Routes
+import com.revolage.quzbus.utils.NetworkResult
 
 interface RoutesRepository {
 

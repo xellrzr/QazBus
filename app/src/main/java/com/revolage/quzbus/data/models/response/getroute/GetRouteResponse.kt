@@ -1,4 +1,4 @@
-package com.example.quzbus.data.models.response.getroute
+package com.revolage.quzbus.data.models.response.getroute
 
 data class GetRouteResponse(
     val La: List<La>, //Маршрут А

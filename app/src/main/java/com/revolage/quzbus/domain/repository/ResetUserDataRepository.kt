@@ -1,4 +1,4 @@
-package com.example.quzbus.domain.repository
+package com.revolage.quzbus.domain.repository
 
 interface ResetUserDataRepository {
 

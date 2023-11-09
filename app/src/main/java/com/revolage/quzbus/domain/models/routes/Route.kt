@@ -1,8 +1,8 @@
-package com.example.quzbus.domain.models.routes
+package com.revolage.quzbus.domain.models.routes
 
-import com.example.quzbus.data.models.response.getbuses.GetBusesResponse
-import com.example.quzbus.data.models.response.getroute.GetRouteResponse
-import com.example.quzbus.domain.models.bus.Bus
+import com.revolage.quzbus.data.models.response.getbuses.GetBusesResponse
+import com.revolage.quzbus.data.models.response.getroute.GetRouteResponse
+import com.revolage.quzbus.domain.models.bus.Bus
 
 data class Route(
     val name: String,

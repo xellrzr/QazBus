@@ -1,19 +1,21 @@
-package com.example.quzbus.ui.adapters
+package com.revolage.quzbus.ui.adapters
 
+import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.example.quzbus.R
-import com.example.quzbus.databinding.ItemCustomButtonBinding
-import com.example.quzbus.domain.models.routes.Direction
-import com.example.quzbus.domain.models.routes.Pallet
-import com.example.quzbus.domain.models.routes.Route
-import com.example.quzbus.utils.MyDiffUtil
+import com.revolage.quzbus.R
+import com.revolage.quzbus.databinding.ItemCustomButtonBinding
+import com.revolage.quzbus.domain.models.routes.Direction
+import com.revolage.quzbus.domain.models.routes.Pallet
+import com.revolage.quzbus.domain.models.routes.Route
+import com.revolage.quzbus.utils.MyDiffUtil
 
-class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHolder>() {
+class SelectBusAdapter(private val context: Context) : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHolder>() {
 
     private var busRoutes = emptyList<Route>()
 
@@ -21,16 +23,22 @@ class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHold
     ) : RecyclerView.ViewHolder(binding.root) {
         fun bind(route: Route) {
             binding.apply {
+                val color: Int = when{
+                    !route.isSelected && route.isFavorite -> Color.rgb(255, 215, 0)
+                    route.isSelected && isNightThemeSelected(context) -> Color.WHITE
+                    route.isSelected && !isNightThemeSelected(context) -> Color.WHITE
+                    else -> Color.BLACK
+                }
+                tvBusNumber.setTextColor(color)
                 tvBusNumber.text = route.name
-                tvBusOnline.text = route.auto
                 if (route.isSelected) {
                     route.pallet?.let { colorFor(it) }?.let { card.setCardBackgroundColor(it) }
                     if (route.selectedDirection != null) {
                         ivDirection.visibility = View.VISIBLE
                         if (route.selectedDirection == Direction.DIRECTION_A) {
-                            ivDirection.setImageResource(R.drawable.arrow_up)
+                            ivDirection.setImageResource(R.drawable.arrow_up_white)
                         } else {
-                            ivDirection.setImageResource(R.drawable.arrow_down)
+                            ivDirection.setImageResource(R.drawable.arrow_down_white)
                         }
                     } else {
                         ivDirection.visibility = View.GONE
@@ -40,25 +48,23 @@ class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHold
                     ivDirection.visibility = View.GONE
                 }
                 if (route.isFavorite) {
-                    card.strokeColor = Color.rgb(71,74,81)
+                    card.strokeColor = Color.rgb(255,215,0) //71, 74, 81
                     card.strokeWidth = 6
-                    tvBusNumber.setTextColor(Color.rgb(71,74,81))
                 } else {
                     card.strokeColor = Color.TRANSPARENT
                     card.strokeWidth = 0
-                    tvBusNumber.setTextColor(Color.BLACK)
                 }
             }
             itemView.setOnClickListener {
                 onItemClickListener?.let {
                     it(route)
-                    setMultipleSelection(adapterPosition)
+                    notifyItemChanged(adapterPosition)
                 }
             }
             itemView.setOnLongClickListener {
                 onLongItemClickListener?.let {
                     it(route)
-                    setFavoriteSelection(adapterPosition)
+                    notifyItemChanged(adapterPosition)
                 }
                 true
             }
@@ -96,23 +102,6 @@ class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHold
         onLongItemClickListener = listener
     }
 
-    private fun setFavoriteSelection(adapterPosition: Int) {
-//        val route = busRoutes[adapterPosition]
-//            route.isFavorite = false
-//            busRoutes[adapterPosition].isFavorite = true
-        notifyItemChanged(adapterPosition)
-    }
-
-    private fun setMultipleSelection(adapterPosition: Int) {
-//        val route = busRoutes[adapterPosition]
-//        if (route.selectedDirection == null) {
-//            route.isSelected = false
-//        } else {
-//            busRoutes[adapterPosition].isSelected = true
-//        }
-        notifyItemChanged(adapterPosition)
-    }
-
     private fun colorFor(pallet: Pallet): Int {
         return when(pallet) {
             Pallet.RED -> Color.RED
@@ -122,5 +111,10 @@ class SelectBusAdapter : RecyclerView.Adapter<SelectBusAdapter.SelectBusViewHold
             Pallet.PURPLE -> Color.CYAN
             Pallet.MAGENTA -> Color.MAGENTA
         }
+    }
+
+    fun isNightThemeSelected(context: Context): Boolean {
+        val currentNightMode = context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK
+        return currentNightMode == Configuration.UI_MODE_NIGHT_YES
     }
 }

@@ -1,8 +1,8 @@
-package com.example.quzbus.data.models.response.getbuses
+package com.revolage.quzbus.data.models.response.getbuses
 
-import com.example.quzbus.domain.models.bus.Bus
-import com.example.quzbus.domain.models.routes.Direction
-import com.example.quzbus.domain.models.routes.Point
+import com.revolage.quzbus.domain.models.bus.Bus
+import com.revolage.quzbus.domain.models.routes.Direction
+import com.revolage.quzbus.domain.models.routes.Point
 
 data class Lt(
     val An: String, // Номер автомобиля

@@ -1,4 +1,4 @@
-package com.example.quzbus.utils
+package com.revolage.quzbus.utils
 
 sealed class NetworkResult<T>(
     val data: T? = null,

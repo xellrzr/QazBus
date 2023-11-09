@@ -1,4 +1,4 @@
-package com.example.quzbus
+package com.revolage.quzbus
 
 import android.app.Application
 import dagger.hilt.android.HiltAndroidApp

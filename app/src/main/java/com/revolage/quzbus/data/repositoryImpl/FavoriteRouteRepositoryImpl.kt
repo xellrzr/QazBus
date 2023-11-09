@@ -1,7 +1,7 @@
-package com.example.quzbus.data.repositoryImpl
+package com.revolage.quzbus.data.repositoryImpl
 
-import com.example.quzbus.data.sharedpref.AppSharedPreferences
-import com.example.quzbus.domain.repository.FavoriteRouteRepository
+import com.revolage.quzbus.data.sharedpref.AppSharedPreferences
+import com.revolage.quzbus.domain.repository.FavoriteRouteRepository
 import javax.inject.Inject
 
 class FavoriteRouteRepositoryImpl @Inject constructor(

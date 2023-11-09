@@ -1,10 +1,10 @@
-package com.example.quzbus.data.repositoryImpl
+package com.revolage.quzbus.data.repositoryImpl
 
-import com.example.quzbus.data.models.response.Message
-import com.example.quzbus.data.remote.QazBusApi
-import com.example.quzbus.data.sharedpref.AppSharedPreferences
-import com.example.quzbus.domain.repository.AuthRepository
-import com.example.quzbus.utils.NetworkResult
+import com.revolage.quzbus.data.models.response.Message
+import com.revolage.quzbus.data.remote.QazBusApi
+import com.revolage.quzbus.data.sharedpref.AppSharedPreferences
+import com.revolage.quzbus.domain.repository.AuthRepository
+import com.revolage.quzbus.utils.NetworkResult
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(

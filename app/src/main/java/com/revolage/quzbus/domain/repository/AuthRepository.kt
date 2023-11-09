@@ -1,7 +1,7 @@
-package com.example.quzbus.domain.repository
+package com.revolage.quzbus.domain.repository
 
-import com.example.quzbus.data.models.response.Message
-import com.example.quzbus.utils.NetworkResult
+import com.revolage.quzbus.data.models.response.Message
+import com.revolage.quzbus.utils.NetworkResult
 
 interface AuthRepository {
 
@@ -9,7 +9,8 @@ interface AuthRepository {
 
     suspend fun getAuth(
         phoneNumber: String,
-        password: String): NetworkResult<Message>
+        password: String
+    ): NetworkResult<Message>
 
     fun isUserLoggedIn(): Boolean
 }

@@ -1,9 +1,9 @@
-package com.example.quzbus.di
+package com.revolage.quzbus.di
 
-import com.example.quzbus.data.remote.QazBusApi
-import com.example.quzbus.data.repositoryImpl.*
-import com.example.quzbus.data.sharedpref.AppSharedPreferences
-import com.example.quzbus.domain.repository.*
+import com.revolage.quzbus.data.remote.QazBusApi
+import com.revolage.quzbus.data.repositoryImpl.*
+import com.revolage.quzbus.data.sharedpref.AppSharedPreferences
+import com.revolage.quzbus.domain.repository.*
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -13,6 +13,14 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object RepositoryModule {
+
+    @Singleton
+    @Provides
+    fun provideIconRepository(
+        sharedPreferences: AppSharedPreferences
+    ) : IconRepository {
+        return IconRepositoryImpl(sharedPreferences)
+    }
 
     @Singleton
     @Provides
