@@ -61,6 +61,9 @@ class MapViewModel @Inject constructor(
     private val stopsZoomLevel: Double = 13.3 //зум при котором начнут отображаться остановки
     private var zoomLevel: Double = 0.0 //текущий зум
 
+    private val _isLoading: MutableLiveData<Boolean> = MutableLiveData(false)
+    val isLoading: LiveData<Boolean> = _isLoading
+
     fun getIconId(): Int = iconsList[iconRepository.getIconId()]
 
     fun setIconId() {
@@ -141,12 +144,15 @@ class MapViewModel @Inject constructor(
                             )
                         }
                     }
+                    _isLoading.postValue(false)
                 }
                 is NetworkResult.Error -> {
                     refreshSheetState(error = "Ошибка получения маршрута")
+                    _isLoading.postValue(false)
                 }
                 is NetworkResult.Loading -> {
-                    TODO()
+                    //TODO
+                    _isLoading.postValue(true)
                 }
             }
         }
@@ -202,12 +208,15 @@ class MapViewModel @Inject constructor(
                             event = Event.BUS
                         )
                     }
+                    _isLoading.postValue(false)
                 }
                 is NetworkResult.Error -> {
                     refreshSheetState(error = "Ошибка получения списка автобусов")
+                    _isLoading.postValue(false)
                 }
                 is NetworkResult.Loading -> {
-                    TODO()
+                    //TODO
+                    _isLoading.postValue(true)
                 }
             }
         }
@@ -405,18 +414,21 @@ class MapViewModel @Inject constructor(
             var error: String? = null
             when(val result = citiesRepository.getCities()) {
                 is NetworkResult.Loading -> {
-                    TODO()
+                    //TODO
+                    _isLoading.postValue(true)
                 }
                 is NetworkResult.Success -> {
                     val regions = result.data?.regions
                     if (regions != null) {
                         cities = regions
+                        _isLoading.postValue(false)
                     } else {
                         error = "Список городов пуст"
                     }
                 }
                 is NetworkResult.Error -> {
                     error = "Ошибка получения списка городов"
+                    _isLoading.postValue(false)
                 }
             }
             refreshSheetState(cities = cities, routes = emptyList(),error = error)
@@ -436,13 +448,16 @@ class MapViewModel @Inject constructor(
                         //заполняем мапу маршрутами
                         routes[route.name] = route
                     }
+                    _isLoading.postValue(false)
                 }
                 is NetworkResult.Error -> {
                     error = "Ошибка получения маршрутов"
                     routes.clear()
+                    _isLoading.postValue(false)
                 }
                 is NetworkResult.Loading -> {
-                    TODO()
+                    //TODO
+                    _isLoading.postValue(true)
                 }
             }
             if (error != null) {

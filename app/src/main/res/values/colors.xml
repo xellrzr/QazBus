@@ -11,6 +11,7 @@
     <color name="grey_50">#0C0303</color>
     <color name="lightgrey">#B6B5B5</color>
     <color name="grey">#6E717A</color>
+    <color name="progress_color">#777777</color>
 
     <!-- Colors for bus route-->
     <color name="red">#FFFF0000</color>

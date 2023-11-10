@@ -7,22 +7,28 @@
     android:layout_height="match_parent"
     tools:context=".ui.fragments.MapFragment">
 
+    <FrameLayout
+        android:id="@+id/loadingBar"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/progress_color"
+        android:alpha="0.5"
+        tools:visibility="visible"
+        android:visibility="gone"
+        android:clickable="false">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:visibility="visible"/>
+
+    </FrameLayout>
+
     <com.mapbox.maps.MapView
         android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
-
-    <FrameLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_vertical">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_bus_console"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"/>
-
-    </FrameLayout>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_settings"

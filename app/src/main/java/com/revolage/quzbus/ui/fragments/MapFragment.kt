@@ -25,6 +25,7 @@ import androidx.annotation.MenuRes
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -67,7 +68,6 @@ class MapFragment : Fragment() {
     private val binding: FragmentMapBinding by viewBinding()
     private val selectCityAdapter by lazy { SelectCityAdapter() }
     private val selectBusAdapter by lazy { SelectBusAdapter(requireContext()) }
-//    private val consoleAdapter by lazy { ConsoleAdapter() }
     private val viewModel: MapViewModel by viewModels()
     private val lines = hashMapOf<Pallet, PolylineAnnotationManager>()
     private val points = hashMapOf<Pallet, PointAnnotationManager>()
@@ -97,19 +97,25 @@ class MapFragment : Fragment() {
         }
         annotationApi = mapView.annotations
 
+        viewModel.isLoading.observe(viewLifecycleOwner) {
+            with(binding) {
+                loadingBar.isVisible = it
+                mapView.isVisible = !it
+                standardBottomSheet.isVisible = !it
+            }
+        }
+
         observeAuth()
         observeSms()
         observeSmsFieldEdit()
         observePhoneFieldEdit()
         observeSheetState()
         observeRouteState()
-//        observeRouteConsole()
         setupViewModel()
         setupAnnotationManager(annotationApi)
         setupListeners()
         setupRecyclerViewSelectCity()
         setupRecyclerViewSelectBus()
-//        setupRecyclerViewConsole()
         addPhoneNumberMask()
         checkPhoneNumberCodeDataChanged()
         showUserCity()
@@ -151,7 +157,6 @@ class MapFragment : Fragment() {
         binding.authField.etSmsCodeEdit.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
                 if (s?.length == 6) {
-                    Log.d("TAG", "enter method")
                     viewModel.getAuth(
                         binding.authField.etPhoneNumberEdit.text.toString().replace("[^0-9]".toRegex(), ""),
                         binding.authField.etSmsCodeEdit.text.toString()
@@ -254,7 +259,6 @@ class MapFragment : Fragment() {
                         val flagPoint = Point.fromLngLat(routeFinish.x, routeFinish.y)
                         drawFlags(flagPoint, busPallet)
                     } catch (e:Exception) {
-                        Log.d("TAG", "${e.message}")
                     }
 
                     drawRoute(points, busPallet)
@@ -287,11 +291,6 @@ class MapFragment : Fragment() {
         }
     }
 
-//    private fun observeRouteConsole() {
-//        viewModel.routeConsole.observe(viewLifecycleOwner) {
-//            consoleAdapter.setNewData(it)
-//        }
-//    }
     // endregion Observers
 
     // region Setups
@@ -335,12 +334,6 @@ class MapFragment : Fragment() {
         }
     }
 
-//    private fun setupRecyclerViewConsole() {
-//        binding.rvBusConsole.apply {
-//            adapter = consoleAdapter
-//            layoutManager = LinearLayoutManager(requireContext())
-//        }
-//    }
     // endregion Setups
 
     // region Helpers Methods(Phone Mask & SMS-field)
@@ -538,14 +531,18 @@ class MapFragment : Fragment() {
             "Актау" -> Point.fromLngLat(51.175112, 43.657283)
             "Актобе" -> Point.fromLngLat(57.171368, 50.283985)
             "Атырау" -> Point.fromLngLat(51.917083, 47.105050)
+            "Аркалык" -> Point.fromLngLat(66.5441, 50.1455)
+            "Есик" -> Point.fromLngLat(77.27, 43.21)
             "Каскелен" -> Point.fromLngLat(76.627544, 43.199252)
             "Костанай" -> Point.fromLngLat(63.640218, 53.212268)
             "Кызылорда" -> Point.fromLngLat(65.490363, 44.846396)
             "Петропавловск" -> Point.fromLngLat(69.149375, 54.863476)
+            "Рудный" -> Point.fromLngLat(63.1168, 52.9729)
             "Талгар" -> Point.fromLngLat(77.240361, 43.302768)
             "Талдыкорган" -> Point.fromLngLat(78.380359, 45.015255)
             "Туркестан" -> Point.fromLngLat(68.239034, 43.304990)
             "Усть-Каменогорск" -> Point.fromLngLat(82.599988, 49.970557)
+            "Шелек" -> Point.fromLngLat(78.1458, 43.3551)
             else -> Point.fromLngLat(0.1,0.1)
         }
     }
