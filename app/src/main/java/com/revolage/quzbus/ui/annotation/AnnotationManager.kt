@@ -16,7 +16,6 @@ import com.mapbox.maps.plugin.annotation.generated.createPointAnnotationManager
 import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManager
 import com.revolage.quzbus.R
 import com.revolage.quzbus.domain.models.routes.Pallet
-import com.revolage.quzbus.domain.models.routes.Route
 import javax.inject.Inject
 
 class AnnotationManager @Inject constructor(
@@ -59,13 +58,9 @@ class AnnotationManager @Inject constructor(
         pointAnnotationManager?.create(pointsOptions)
     }
 
-    fun drawBuses(busRoute: Route, pallet: Pallet) {
+    fun drawBuses(pointsA: List<Point>, pointsB: List<Point>, pallet: Pallet) {
         val pointAnnotationManager = pointsBuses[pallet]
         pointAnnotationManager?.deleteAll()
-
-        val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
-        val pointsB = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
-        val pointsA = directionBuses.map { Point.fromLngLat(it.pointB.x, it.pointB.y) }
 
         if (pointsA.isEmpty()) return
 

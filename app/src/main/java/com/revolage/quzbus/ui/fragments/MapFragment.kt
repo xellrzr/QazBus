@@ -205,18 +205,17 @@ class MapFragment : Fragment() {
 
             when(result.event) {
                 Event.CLEAR -> {
-//                    annotationManager.drawBuses(emptyList(), emptyList() ,busPallet)
-                    annotationManager.drawBuses(busRoute, busPallet)
+                    annotationManager.drawBuses(emptyList(), emptyList() ,busPallet)
                     annotationManager.drawRoute(emptyList(), busPallet)
                     annotationManager.drawFlags(null, busPallet)
                     annotationManager.drawStops(emptyList(), busPallet)
 
                 }
                 Event.BUS -> {
-//                    val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
-//                    val busPointsA = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
-//                    val busPointsB = directionBuses.map { Point.fromLngLat(it.pointB.x, it.pointB.y) }
-                    annotationManager.drawBuses(busRoute, busPallet)
+                    val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
+                    val busPointsA = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
+                    val busPointsB = directionBuses.map { Point.fromLngLat(it.pointB.x, it.pointB.y) }
+                    annotationManager.drawBuses(busPointsB, busPointsA, busPallet)
                 }
                 Event.ROUTE -> {
                     val routePoints = if (busRoute.selectedDirection == Direction.DIRECTION_A) busRoute.routeA else busRoute.routeB
@@ -267,8 +266,7 @@ class MapFragment : Fragment() {
                     val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
                     val busPointsA = directionBuses.map { Point.fromLngLat(it.pointA.x, it.pointA.y) }
                     val busPointsB = directionBuses.map { Point.fromLngLat(it.pointB.x, it.pointB.y) }
-//                    annotationManager.drawBuses(busPointsB, busPointsA ,busPallet)
-                    annotationManager.drawBuses(busRoute, busPallet)
+                    annotationManager.drawBuses(busPointsB, busPointsA ,busPallet)
                 }
                 Event.ZOOM -> {
                     if (result.showStops) {
