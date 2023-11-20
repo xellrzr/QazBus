@@ -209,7 +209,6 @@ class MapFragment : Fragment() {
                     annotationManager.drawRoute(emptyList(), busPallet)
                     annotationManager.drawFlags(null, busPallet)
                     annotationManager.drawStops(emptyList(), busPallet)
-
                 }
                 Event.BUS -> {
                     val directionBuses = busRoute.busPoints.filter { it.direction == busRoute.selectedDirection }
