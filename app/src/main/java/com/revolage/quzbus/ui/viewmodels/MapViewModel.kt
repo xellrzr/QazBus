@@ -55,9 +55,6 @@ class MapViewModel @Inject constructor(
     private val _sheetState: MutableLiveData<SheetState> = MutableLiveData()
     val sheetState: LiveData<SheetState> = _sheetState
 
-    private val _routeConsole: MutableLiveData<List<Route>> = MutableLiveData()
-    val routeConsole: LiveData<List<Route>> = _routeConsole
-
     private val stopsZoomLevel: Double = 13.3 //зум при котором начнут отображаться остановки
     private var zoomLevel: Double = 0.0 //текущий зум
 
@@ -132,9 +129,7 @@ class MapViewModel @Inject constructor(
                         //заполняем маршрут
                         result.data?.let { routeObj.fillFrom(it) }
 
-                        map[routeObj.name] = routeObj
-                        _routeConsole.value = map.values.map { it }
-                        Log.d("TAG", "${map.keys}")
+                        map[routeObj.name] = routeObj // TODO Remove?
 
                         if (isEmpty) {
                             refreshRouteState(
@@ -177,8 +172,7 @@ class MapViewModel @Inject constructor(
                     model.isSelected = false
                     model.pallet?.let { drain(it) }
 
-                    map.remove(model.name)
-                    _routeConsole.value = map.values.map { it }
+                    map.remove(model.name) //TODO remove?
                 }
                 //Если направление равно нулю - тогда задаем направление движение на А
             } else {
@@ -404,7 +398,6 @@ class MapViewModel @Inject constructor(
         val sortedList = routes.sortedWith(
             compareBy({ !it.isSelected }, { !it.isFavorite } ,{ it.name.toIntOrNull() }))
         refreshSheetState(routes = sortedList)
-        Log.d("TAG", "message")
     }
 
     //Метод для получения списка городов
