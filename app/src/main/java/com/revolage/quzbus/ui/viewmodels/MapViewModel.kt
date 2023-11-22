@@ -13,6 +13,7 @@ import com.revolage.quzbus.domain.models.routes.Pallet
 import com.revolage.quzbus.domain.models.routes.Route
 import com.revolage.quzbus.domain.repository.*
 import com.revolage.quzbus.utils.BusIconsUtils
+import com.revolage.quzbus.utils.Constants.Companion.SMS_CODE_LENGTH
 import com.revolage.quzbus.utils.NetworkResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
@@ -61,6 +62,8 @@ class MapViewModel @Inject constructor(
     private val _isLoading: MutableLiveData<Boolean> = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
+    private var lastRequest: RequestType = RequestType.NONE
+
     fun getIconId(): Int = iconsList[iconRepository.getIconId()]
 
     fun setIconId() {
@@ -78,8 +81,6 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    // region Auth methods
-    //Метод для получения SMS - кода
     fun getSmsCode(phoneNumber: String) {
         viewModelScope.launch {
             _getSmsCodeResponse.postValue(NetworkResult.Loading())
@@ -87,12 +88,12 @@ class MapViewModel @Inject constructor(
         }
     }
 
-    //Метод для авторизации
     fun getAuth(phoneNumber: String, password: String) {
         viewModelScope.launch {
             _getAuthResponse.postValue(NetworkResult.Loading())
             _getAuthResponse.postValue(authRepository.getAuth(phoneNumber, password))
         }
+        lastRequest = RequestType.AUTHORIZATION
     }
 
     fun refreshAuth() {
@@ -105,7 +106,6 @@ class MapViewModel @Inject constructor(
         if (isCitySelected && isUserLoggedIn) getRoutes() else getCities()
     }
 
-    //Метод для проверки изменения данных в полях авторизации
     fun authDataChanged(phoneNumber: String, smsCode: String) {
         if (!isPhoneNumberValid(phoneNumber)) {
             _authFormState.value = AuthFormState(phoneNumberError = R.string.incorrect_phone_number)
@@ -115,10 +115,7 @@ class MapViewModel @Inject constructor(
             _authFormState.value = AuthFormState(isDataValid = true)
         }
     }
-    // endregion Auth methods
 
-    // region Route
-    //Получение маршрута для выбранного автобуса
     private fun getRoute(route: String) {
         viewModelScope.launch {
             when(val result = routesRepository.getRoute(route)) {
@@ -146,14 +143,13 @@ class MapViewModel @Inject constructor(
                     _isLoading.postValue(false)
                 }
                 is NetworkResult.Loading -> {
-                    //TODO
                     _isLoading.postValue(true)
                 }
             }
         }
+        lastRequest = RequestType.GET_ROUTE
     }
 
-    //По нажатию проверяем есть ли переданный маршрут в коллекции
     fun selectRoute(route: String): Boolean {
         val model = routes[route]
 
@@ -189,7 +185,6 @@ class MapViewModel @Inject constructor(
         return true
     }
 
-    //Получение списка автобусов для выбранного маршрута
     private fun getBuses(route: String) {
         viewModelScope.launch {
             when(val result = routesRepository.getBuses(route)) {
@@ -209,11 +204,11 @@ class MapViewModel @Inject constructor(
                     _isLoading.postValue(false)
                 }
                 is NetworkResult.Loading -> {
-                    //TODO
                     _isLoading.postValue(true)
                 }
             }
         }
+        lastRequest = RequestType.GET_BUSES
     }
 
     fun favoriteRoute(route: String) {
@@ -225,9 +220,7 @@ class MapViewModel @Inject constructor(
         favoriteRouteRepository.setFavoriteRoute(name, cityId, isFavorite)
         updateRoutesList()
     }
-    // endregion Route
 
-    // region Route methods
     fun checkPool(): Boolean {
         return pool.isEmpty()
     }
@@ -316,9 +309,7 @@ class MapViewModel @Inject constructor(
         pool.clear()
         if (pool.isEmpty()) cancelTimer()
     }
-    // endregion Route methods
 
-    // region Refresh States
     private fun refreshSheetState(
         isAuthorized: Boolean = authRepository.isUserLoggedIn(),
         isCitySelected: Boolean = citiesRepository.isCitySelected(),
@@ -350,9 +341,7 @@ class MapViewModel @Inject constructor(
             showStops = showStops
         )
     }
-    // endregion Refresh States
 
-    // region Menu Reset Methods
     fun resetCity() {
         refreshSheetState(
             isCitySelected = false,
@@ -378,9 +367,7 @@ class MapViewModel @Inject constructor(
         resetUserDataRepository.setPhoneNumber(null)
         resetUserDataRepository.setAccessToken(null)
     }
-    // endregion Menu Reset Methods
 
-    // region Cities & Routes
     fun selectCity(cityName: String, cityId: Int) {
         citiesRepository.setSelectCity(cityName)
         citiesRepository.setCityId(cityId)
@@ -392,7 +379,6 @@ class MapViewModel @Inject constructor(
         return citiesRepository.getCity()
     }
 
-    //Сортировка маршрутов
     private fun updateRoutesList() {
         val routes = routes.values.map { it }
         val sortedList = routes.sortedWith(
@@ -400,14 +386,12 @@ class MapViewModel @Inject constructor(
         refreshSheetState(routes = sortedList)
     }
 
-    //Метод для получения списка городов
     private fun getCities() {
         viewModelScope.launch {
             var cities = emptyList<Region>()
             var error: String? = null
             when(val result = citiesRepository.getCities()) {
                 is NetworkResult.Loading -> {
-                    //TODO
                     _isLoading.postValue(true)
                 }
                 is NetworkResult.Success -> {
@@ -426,6 +410,7 @@ class MapViewModel @Inject constructor(
             }
             refreshSheetState(cities = cities, routes = emptyList(),error = error)
         }
+        lastRequest = RequestType.GET_CITIES
     }
 
     private fun getRoutes() {
@@ -434,11 +419,8 @@ class MapViewModel @Inject constructor(
             when(val result = routesRepository.getRoutes()) {
                 is NetworkResult.Success -> {
                     val dataRoutes = result.data?.routes ?: emptyList()
-                    for (route in dataRoutes) {
-                        //проверяем по каждому маршруту, находится ли он в избранном
-                        route.isFavorite = favoriteRouteRepository.getFavoriteRoute(
-                            route.name, citiesRepository.getCityId())
-                        //заполняем мапу маршрутами
+                    dataRoutes.forEach { route ->
+                        route.isFavorite = favoriteRouteRepository.getFavoriteRoute(route.name, citiesRepository.getCityId())
                         routes[route.name] = route
                     }
                     _isLoading.postValue(false)
@@ -449,7 +431,6 @@ class MapViewModel @Inject constructor(
                     _isLoading.postValue(false)
                 }
                 is NetworkResult.Loading -> {
-                    //TODO
                     _isLoading.postValue(true)
                 }
             }
@@ -459,21 +440,17 @@ class MapViewModel @Inject constructor(
                 updateRoutesList()
             }
         }
+        lastRequest = RequestType.GET_ROUTES
     }
-    // endregion Cities & Routes
 
-    // region Helpers Methods
-    //Метод для проверки заполненности поля ввода номера телефона
     private fun isPhoneNumberValid(phoneNumber: String): Boolean {
         return phoneNumber.isNotBlank()
     }
 
-    //Метод для проверки длины введенного SMS - кода
     private fun isSmsCodeValid(smsCode: String): Boolean {
-        return smsCode.length == 6
+        return smsCode.length == SMS_CODE_LENGTH
     }
 
-    //Присваивание цвета паллетки
     private fun next(palette: Pallet): Pallet {
         return when (palette) {
             Pallet.RED -> Pallet.GREEN
@@ -484,5 +461,23 @@ class MapViewModel @Inject constructor(
             Pallet.MAGENTA -> Pallet.RED
         }
     }
-    // endregion Helpers Methods
+
+    fun retryLastRequest() {
+        when (lastRequest) {
+            RequestType.NONE -> { /* TODO */ }
+            RequestType.AUTHORIZATION -> { /* TODO */ }
+            RequestType.GET_CITIES -> getCities()
+            RequestType.GET_ROUTES -> getRoutes()
+            RequestType.GET_ROUTE, RequestType.GET_BUSES -> ping()
+        }
+    }
+
+    enum class RequestType {
+        NONE,
+        AUTHORIZATION,
+        GET_CITIES,
+        GET_ROUTES,
+        GET_ROUTE,
+        GET_BUSES
+    }
 }
