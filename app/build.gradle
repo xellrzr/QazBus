@@ -49,7 +49,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
     // MapBox
-    implementation 'com.mapbox.maps:android:10.10.1'
+    implementation 'com.mapbox.maps:android:10.16.2'
     implementation 'com.mapbox.mapboxsdk:mapbox-sdk-services:6.10.0'
 
     implementation 'com.mapbox.mapboxsdk:mapbox-android-gestures:0.8.0'
