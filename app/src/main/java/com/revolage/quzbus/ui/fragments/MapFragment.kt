@@ -102,13 +102,11 @@ class MapFragment : Fragment() {
 
         val connectivityManager = requireActivity().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
-        // Регистрируем NetworkManager
         networkManager = NetworkManager(
             onNetworkAvailable = {
                 lifecycleScope.launch {
                     withContext(Dispatchers.Main) {
                         viewModel.retryLastRequest()
-                        Log.d("LAST_REQUEST", "invoke")
                     }
                 }
             },
@@ -128,7 +126,6 @@ class MapFragment : Fragment() {
             with(binding) {
                 loadingBar.isVisible = it
                 standardBottomSheet.isVisible = !it
-                Log.d("LAST_REQUEST", "$it")
             }
         }
 
