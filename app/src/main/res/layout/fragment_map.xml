@@ -12,6 +12,40 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"/>
 
+    <ImageView
+        android:id="@+id/ivPlus"
+        android:layout_width="?minTouchTargetSize"
+        android:layout_height="?minTouchTargetSize"
+        android:src="@drawable/ic_plus"
+        android:layout_gravity="center_vertical"
+        android:layout_marginBottom="100dp"
+        android:scaleType="centerInside"
+        android:alpha="0.7"/>
+
+    <ImageView
+        android:id="@+id/ivMinus"
+        android:layout_width="?minTouchTargetSize"
+        android:layout_height="?minTouchTargetSize"
+        android:src="@drawable/ic_minus"
+        android:layout_gravity="center_vertical"
+        android:scaleType="centerInside"
+        android:alpha="0.7"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_user_location"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_anchor="@id/standard_bottom_sheet"
+        app:layout_anchorGravity="start"
+        android:backgroundTint="@color/white"
+        app:fabSize="mini"
+        android:layout_marginBottom="@dimen/dimen_6"
+        app:shapeAppearance="@style/fab_3_rounded"
+        android:contentDescription="@string/fab_desc"
+        app:srcCompat="@drawable/ic_user_location"
+        android:visibility="gone"
+        tools:visibility="visible"/>
+
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_settings"
             android:layout_width="wrap_content"
@@ -67,10 +101,20 @@
 
         </LinearLayout>
 
-    <ProgressBar
+    <FrameLayout
         android:id="@+id/loadingBar"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"/>
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/white"
+        android:clickable="false"
+        android:visibility="gone"
+        android:alpha="0.5">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"/>
+
+    </FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

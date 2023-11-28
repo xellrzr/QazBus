@@ -21,6 +21,34 @@ class CameraController(private val mapView: MapView) {
         mapViewAnimation()
     }
 
+    fun moveToLocation(point: Point?) {
+        val cameraPosition = CameraOptions.Builder()
+            .center(point)
+            .build()
+
+        mapView.getMapboxMap().setCamera(cameraPosition)
+    }
+
+    fun zoomMinus() {
+        val currentZoom = mapView.getMapboxMap().cameraState.zoom
+        val minusZoom = currentZoom -1
+        val cameraPosition = CameraOptions.Builder()
+            .zoom(minusZoom)
+            .build()
+
+        mapView.getMapboxMap().setCamera(cameraPosition)
+    }
+
+    fun zoomPlus() {
+        val currentZoom = mapView.getMapboxMap().cameraState.zoom
+        val plusZoom = currentZoom +1
+        val cameraPosition = CameraOptions.Builder()
+            .zoom(plusZoom)
+            .build()
+
+        mapView.getMapboxMap().setCamera(cameraPosition)
+    }
+
     fun listenCameraChange(onZoomChanged: (Double) -> Unit) {
         val listener = OnCameraChangeListener { _: CameraChangedEventData ->
             val zoom = mapView.getMapboxMap().cameraState.zoom

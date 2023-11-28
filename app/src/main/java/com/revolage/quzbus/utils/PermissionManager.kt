@@ -1,11 +1,11 @@
 package com.revolage.quzbus.utils
 
-import android.Manifest
 import android.Manifest.permission.ACCESS_COARSE_LOCATION
 import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.content.pm.PackageManager
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.FragmentActivity
+import com.revolage.quzbus.utils.Constants.Companion.PERMISSION_ID
 import javax.inject.Inject
 
 class PermissionManager @Inject constructor(
@@ -27,11 +27,11 @@ class PermissionManager @Inject constructor(
         return false
     }
 
-    fun requestPermissions(permissionId: Int) {
+    fun requestPermissions() {
         ActivityCompat.requestPermissions(
             activity,
             arrayOf(ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION),
-            permissionId
+            PERMISSION_ID
         )
     }
 }

@@ -41,7 +41,7 @@ abstract class BaseRepository() {
             } catch (e: HttpException) {
                 NetworkResult.Error(e.message() ?: "Something went wrong")
             } catch (e: IOException) {
-                NetworkResult.Error("Check your Network connection")
+                NetworkResult.Error("Проверьте интернет-соединение")
             } catch (e:Exception) {
                 NetworkResult.Error(e.message)
             }

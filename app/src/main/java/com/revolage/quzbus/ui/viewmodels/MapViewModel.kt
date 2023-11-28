@@ -1,6 +1,5 @@
 package com.revolage.quzbus.ui.viewmodels
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -13,10 +12,16 @@ import com.revolage.quzbus.domain.models.routes.Pallet
 import com.revolage.quzbus.domain.models.routes.Route
 import com.revolage.quzbus.domain.repository.*
 import com.revolage.quzbus.utils.BusIconsUtils
+import com.revolage.quzbus.utils.Constants.Companion.CURRENT_ZOOM
 import com.revolage.quzbus.utils.Constants.Companion.SMS_CODE_LENGTH
+import com.revolage.quzbus.utils.Constants.Companion.STOPS_VISIBLE_ZOOM
 import com.revolage.quzbus.utils.NetworkResult
+import com.revolage.quzbus.domain.repository.NetworkConnectivityRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.stateIn
 import java.util.*
 import javax.inject.Inject
 import kotlin.concurrent.schedule
@@ -28,7 +33,8 @@ class MapViewModel @Inject constructor(
     private val routesRepository: RoutesRepository,
     private val resetUserDataRepository: ResetUserDataRepository,
     private val favoriteRouteRepository: FavoriteRouteRepository,
-    private val iconRepository: IconRepository
+    private val iconRepository: IconRepository,
+    networkRepository: NetworkConnectivityRepository
 ) : ViewModel() {
 
     private var job: Job? = null
@@ -38,31 +44,33 @@ class MapViewModel @Inject constructor(
     private val map = hashMapOf<String, Route>()
     private val iconsList = BusIconsUtils.iconsList
 
-    //Хранит ответ на запрос получение SMS - кода
     private val _getSmsCodeResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
     val getSmsCodeResponse: LiveData<NetworkResult<Message>> = _getSmsCodeResponse
 
-    //Хранит ответ на запрос получение авторизации
     private val _getAuthResponse: MutableLiveData<NetworkResult<Message>> = MutableLiveData()
     val authResponse: LiveData<NetworkResult<Message>> = _getAuthResponse
 
-    //Хранит стейт и проверку на заполненность данных номер телефона и SMS код
     private val _authFormState: MutableLiveData<AuthFormState> = MutableLiveData()
 
-    //Хранит стейт со всеми маршрутами доступными для города
     private val _routeState: MutableLiveData<RouteState> = MutableLiveData()
     val routeState: LiveData<RouteState> = _routeState
 
     private val _sheetState: MutableLiveData<SheetState> = MutableLiveData()
     val sheetState: LiveData<SheetState> = _sheetState
 
-    private val stopsZoomLevel: Double = 13.3 //зум при котором начнут отображаться остановки
-    private var zoomLevel: Double = 0.0 //текущий зум
+    private val stopsZoomLevel: Double = STOPS_VISIBLE_ZOOM
+    private var zoomLevel: Double = CURRENT_ZOOM
 
     private val _isLoading: MutableLiveData<Boolean> = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
 
     private var lastRequest: RequestType = RequestType.NONE
+
+    private val _phoneNumber: MutableLiveData<String> = MutableLiveData("")
+    private val _password: MutableLiveData<String> = MutableLiveData("")
+
+    val status: Flow<NetworkConnectivityRepository.Status> = networkRepository.observeNetworkConnection()
+            .stateIn(viewModelScope, WhileSubscribed(), NetworkConnectivityRepository.Status.UNAVAILABLE)
 
     fun getIconId(): Int = iconsList[iconRepository.getIconId()]
 
@@ -93,6 +101,8 @@ class MapViewModel @Inject constructor(
             _getAuthResponse.postValue(NetworkResult.Loading())
             _getAuthResponse.postValue(authRepository.getAuth(phoneNumber, password))
         }
+        _phoneNumber.value = phoneNumber
+        _password.value = password
         lastRequest = RequestType.AUTHORIZATION
     }
 
@@ -139,7 +149,7 @@ class MapViewModel @Inject constructor(
                     _isLoading.postValue(false)
                 }
                 is NetworkResult.Error -> {
-                    refreshSheetState(error = "Ошибка получения маршрута")
+//                    refreshSheetState(error = result.message)
                     _isLoading.postValue(false)
                 }
                 is NetworkResult.Loading -> {
@@ -200,7 +210,7 @@ class MapViewModel @Inject constructor(
                     _isLoading.postValue(false)
                 }
                 is NetworkResult.Error -> {
-                    refreshSheetState(error = "Ошибка получения списка автобусов")
+//                    refreshSheetState(error = result.message)
                     _isLoading.postValue(false)
                 }
                 is NetworkResult.Loading -> {
@@ -404,7 +414,7 @@ class MapViewModel @Inject constructor(
                     }
                 }
                 is NetworkResult.Error -> {
-                    error = "Ошибка получения списка городов"
+//                    error = result.message
                     _isLoading.postValue(false)
                 }
             }
@@ -426,7 +436,7 @@ class MapViewModel @Inject constructor(
                     _isLoading.postValue(false)
                 }
                 is NetworkResult.Error -> {
-                    error = "Ошибка получения маршрутов"
+//                    error = result.message
                     routes.clear()
                     _isLoading.postValue(false)
                 }
@@ -464,8 +474,8 @@ class MapViewModel @Inject constructor(
 
     fun retryLastRequest() {
         when (lastRequest) {
-            RequestType.NONE -> { /* TODO */ }
-            RequestType.AUTHORIZATION -> { /* TODO */ }
+            RequestType.NONE -> { refreshAuth() }
+            RequestType.AUTHORIZATION -> { getAuth(_phoneNumber.value ?: "", _password.value ?: "") }
             RequestType.GET_CITIES -> getCities()
             RequestType.GET_ROUTES -> getRoutes()
             RequestType.GET_ROUTE, RequestType.GET_BUSES -> ping()

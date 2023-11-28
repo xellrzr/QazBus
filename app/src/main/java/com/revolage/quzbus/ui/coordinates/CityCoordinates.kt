@@ -24,7 +24,7 @@ class CityCoordinates {
                 "Туркестан" -> Point.fromLngLat(68.239034, 43.304990)
                 "Усть-Каменогорск" -> Point.fromLngLat(82.599988, 49.970557)
                 "Шелек" -> Point.fromLngLat(78.1458, 43.3551)
-                else -> Point.fromLngLat(0.1,0.1)
+                else -> Point.fromLngLat(71.447429, 51.168014)
             }
         }
     }
