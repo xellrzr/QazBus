@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">QazBus</string>
 
-    <!-- Phone & SMS code Errors -->
+    <!-- Ошибки номера телефона и СМС -->
     <string name="incorrect_phone_number">Неверный номер</string>
     <string name="incorrect_sms_code">Введите код</string>
 
@@ -31,4 +31,10 @@
     <string name="menu_sms_positive">Отправить</string>
     <string name="menu_sms_negative">Нет</string>
 
+    <!-- Интернет соединение -->
+    <string name="internet_connection_check">Проверьте интернет соединение</string>
+    <string name="internet_connection_retry">Повторить</string>
+
+    <!-- Предупреждения -->
+    <string name="routes_max_count">Выбрано максимальное количество маршрутов</string>
 </resources>

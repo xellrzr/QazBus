@@ -1,12 +1,10 @@
 package com.revolage.quzbus.ui.fragments
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
+import android.content.pm.PackageManager
+import android.location.Location
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -26,6 +24,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.gms.location.LocationServices
 import com.revolage.quzbus.R
 import com.revolage.quzbus.databinding.FragmentMapBinding
 import com.revolage.quzbus.domain.models.routes.Direction
@@ -43,20 +42,18 @@ import com.mapbox.maps.Style
 import com.mapbox.maps.plugin.annotation.AnnotationPlugin
 import com.mapbox.maps.plugin.annotation.annotations
 import com.mapbox.maps.plugin.locationcomponent.location
+import com.mapbox.maps.plugin.scalebar.scalebar
 import com.redmadrobot.inputmask.MaskedTextChangedListener
 import com.revolage.quzbus.ui.annotation.AnnotationManager
 import com.revolage.quzbus.ui.camera.CameraController
 import com.revolage.quzbus.ui.coordinates.CityCoordinates.Companion.cityCoordinates
 import com.revolage.quzbus.utils.Constants.Companion.PERMISSION_ID
-import com.revolage.quzbus.utils.NetworkManager
 import com.revolage.quzbus.utils.PermissionManager
+import com.revolage.quzbus.domain.repository.NetworkConnectivityRepository
 import com.revolage.quzbus.utils.hideKeyboard
 import com.revolage.quzbus.utils.showKeyboard
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MapFragment : Fragment() {
@@ -66,14 +63,11 @@ class MapFragment : Fragment() {
     private lateinit var annotationManager: AnnotationManager
     private lateinit var cameraController: CameraController
     private lateinit var permissionManager: PermissionManager
-    private lateinit var networkManager: NetworkManager
 
     private val binding: FragmentMapBinding by viewBinding()
     private val selectCityAdapter by lazy { SelectCityAdapter() }
     private val selectBusAdapter by lazy { SelectBusAdapter(requireContext()) }
     private val viewModel: MapViewModel by viewModels()
-
-    private var isNetworkAvailable = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -86,6 +80,17 @@ class MapFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.status.collect { status ->
+                when (status) {
+                    NetworkConnectivityRepository.Status.UNAVAILABLE,
+                    NetworkConnectivityRepository.Status.LOSING,
+                    NetworkConnectivityRepository.Status.LOST -> showSnackBarConnectionLost()
+                    NetworkConnectivityRepository.Status.AVAILABLE -> viewModel.retryLastRequest()
+                }
+            }
+        }
+
         mapView = binding.mapView
         mapView.getMapboxMap().loadStyleUri(Style.MAPBOX_STREETS)
         {
@@ -96,39 +101,22 @@ class MapFragment : Fragment() {
         }
         annotationApi = mapView.annotations
 
+        val scaleBarPlugin = mapView.scalebar
+        scaleBarPlugin.enabled = false
+
         annotationManager = AnnotationManager(annotationApi, resources, requireContext()) { viewModel.getIconId() }
         cameraController = CameraController(mapView)
         permissionManager = PermissionManager(requireActivity())
 
-        val connectivityManager = requireActivity().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-
-        networkManager = NetworkManager(
-            onNetworkAvailable = {
-                lifecycleScope.launch {
-                    withContext(Dispatchers.Main) {
-                        viewModel.retryLastRequest()
-                    }
-                }
-            },
-            onNetworkLost = {
-                showSnackBarConnectionLost()
-            }
-        )
-        connectivityManager.registerDefaultNetworkCallback(networkManager)
-
-        val network = connectivityManager.activeNetwork
-        val capabilities = connectivityManager.getNetworkCapabilities(network)
-        isNetworkAvailable = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-
-        if (!isNetworkAvailable) showSnackBarConnectionLost()
-
-        viewModel.isLoading.observe(viewLifecycleOwner) {
-            with(binding) {
-                loadingBar.isVisible = it
-                standardBottomSheet.isVisible = !it
-            }
+        binding.ivMinus.setOnClickListener {
+            cameraZoomMinus()
         }
 
+        binding.ivPlus.setOnClickListener {
+            cameraZoomPlus()
+        }
+
+        observeLoading()
         observeAuth()
         observeSms()
         observeSmsFieldEdit()
@@ -142,8 +130,18 @@ class MapFragment : Fragment() {
         addPhoneNumberMask()
         checkPhoneNumberCodeDataChanged()
         showUserCity()
-        getLocation()
+        checkPermissions()
+        moveToUserLocation()
         cameraController.listenCameraChange { zoomLevel -> viewModel.setZoomLevel(zoomLevel) }
+    }
+
+    private fun observeLoading() {
+        viewModel.isLoading.observe(viewLifecycleOwner) {
+            with(binding) {
+                loadingBar.isVisible = it
+                standardBottomSheet.isVisible = !it
+            }
+        }
     }
 
     private fun observeAuth() {
@@ -225,7 +223,7 @@ class MapFragment : Fragment() {
                     selectCityAdapter.setNewData(it.cities)
                 }
                 if (it.error != null) {
-                    Toast.makeText(requireContext(), it.error, Toast.LENGTH_SHORT).show()
+                    Snackbar.make(view, it.error, Snackbar.LENGTH_LONG).show()
                 }
             }
         }
@@ -378,11 +376,35 @@ class MapFragment : Fragment() {
     }
 
     @SuppressLint("MissingPermission", "SetTextI18n")
-    private fun getLocation() {
+    private fun checkPermissions() {
         if (permissionManager.checkPermissions()) {
             showUserLocation()
+            binding.fabUserLocation.isVisible = true
         } else {
-            permissionManager.requestPermissions(PERMISSION_ID)
+            permissionManager.requestPermissions()
+            binding.fabUserLocation.isVisible = false
+        }
+    }
+
+    @Deprecated("Deprecated in Java", ReplaceWith(
+        "super.onRequestPermissionsResult(requestCode, permissions, grantResults)",
+        "androidx.fragment.app.Fragment")
+    )
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            PERMISSION_ID -> {
+                if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                    showUserLocation()
+                    binding.fabUserLocation.isVisible = true
+                } else {
+                    binding.fabUserLocation.isVisible = false
+                }
+            }
         }
     }
 
@@ -398,13 +420,39 @@ class MapFragment : Fragment() {
         }
     }
 
+    private fun cameraZoomMinus() {
+        cameraController.zoomMinus()
+    }
+
+    private fun cameraZoomPlus() {
+        cameraController.zoomPlus()
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun moveToUserLocation() {
+        binding.fabUserLocation.setOnClickListener {
+            val fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { location: Location? ->
+                    location?.let {
+                        val userLat = location.latitude
+                        val userLong = location.longitude
+                        cameraController.moveToLocation(Point.fromLngLat(userLong, userLat))
+                    }
+                }
+                .addOnFailureListener { e ->
+                    // Обработай ошибку получения местоположения
+                }
+        }
+    }
+
     private fun listenSelectedRoute() {
         selectBusAdapter.setOnItemClickListener {
             val success = viewModel.selectRoute(it.name)
             if (!success) {
                 Toast.makeText(
                     requireContext(),
-                    "Выбрано максимальное количество маршрутов", Toast.LENGTH_SHORT
+                    getString(R.string.routes_max_count), Toast.LENGTH_SHORT
                 ).show()
             }
         }
@@ -512,22 +560,7 @@ class MapFragment : Fragment() {
     }
 
     private fun showSnackBarConnectionLost() {
-        view?.let {
-            Snackbar.make(it, "Проверьте интернет соединение", Snackbar.LENGTH_INDEFINITE)
-                .setAction("Повторить") {
-                    lifecycleScope.launch {
-                        withContext(Dispatchers.Main) {
-                            viewModel.retryLastRequest()
-                        }
-                    }
-                }.show()
-        }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        val connectivityManager = requireActivity().getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        connectivityManager.unregisterNetworkCallback(networkManager)
+        view?.let { Snackbar.make(it, getString(R.string.internet_connection_check), Snackbar.LENGTH_LONG).show() }
     }
 
 }
